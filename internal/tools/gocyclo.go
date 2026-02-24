@@ -1,30 +1,22 @@
 package internal
 
 import (
+	"armur-codescanner/internal/logger"
 	utils "armur-codescanner/pkg"
 	"bytes"
-	"log"
 	"os/exec"
 	"strings"
 )
 
-func RunGocyclo(directory string) map[string]interface{} {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("Error while running Gocyclo: %v", r)
-		}
-	}()
-
-	log.Println("Running Gocyclo")
+func RunGocyclo(directory string) (map[string]interface{}, error) {
+	logger.Info().Str("tool", "gocyclo").Str("dir", directory).Msg("running")
 	gocycloResults, err := RunGoCycloOnRepo(directory)
 	if err != nil {
-		log.Printf("Error while running Gocyclo: %v", err)
-		return nil
+		logger.Warn().Str("tool", "gocyclo").Err(err).Msg("tool execution failed, returning partial results")
+		return utils.ConvertCategorizedResults(utils.InitCategorizedResults()), err
 	}
-
 	categorizedResults := CategorizeGocycloResults(gocycloResults, directory)
-	newcatresult := utils.ConvertCategorizedResults(categorizedResults)
-	return newcatresult
+	return utils.ConvertCategorizedResults(categorizedResults), nil
 }
 
 func RunGoCycloOnRepo(directory string) (string, error) {
@@ -40,41 +32,42 @@ func RunGoCycloOnRepo(directory string) (string, error) {
 func CategorizeGocycloResults(results string, directory string) map[string][]interface{} {
 	categorizedResults := utils.InitCategorizedResults()
 
-	if results != "" {
-		lines := strings.Split(results, "\n")
-		for _, line := range lines {
-			parts := strings.Fields(line)
-			if len(parts) < 4 {
-				continue
-			}
+	if results == "" {
+		logger.Debug().Str("tool", "gocyclo").Msg("no results found")
+		return categorizedResults
+	}
 
-			complexity := parts[0]
-			pkg := parts[1]
-			function := parts[2]
-
-			locationParts := strings.Split(parts[3], ":")
-			if len(locationParts) != 3 {
-				log.Printf("Invalid location format: %s", parts[3])
-				continue
-			}
-
-			filePath := strings.Replace(locationParts[0], directory, "", 1)
-			lineNumber := locationParts[1]
-			columnNumber := locationParts[2]
-
-			resultEntry := map[string]interface{}{
-				"complexity": complexity,
-				"function":   function,
-				"package":    pkg,
-				"path":       filePath,
-				"line":       lineNumber,
-				"column":     columnNumber,
-			}
-
-			categorizedResults[utils.COMPLEX_FUNCTIONS] = append(categorizedResults[utils.COMPLEX_FUNCTIONS], resultEntry)
+	lines := strings.Split(results, "\n")
+	for _, line := range lines {
+		parts := strings.Fields(line)
+		if len(parts) < 4 {
+			continue
 		}
-	} else {
-		log.Println("No results found from Gocyclo.")
+
+		complexity := parts[0]
+		pkg := parts[1]
+		function := parts[2]
+
+		locationParts := strings.Split(parts[3], ":")
+		if len(locationParts) != 3 {
+			logger.Debug().Str("tool", "gocyclo").Msgf("invalid location format: %s", parts[3])
+			continue
+		}
+
+		filePath := strings.Replace(locationParts[0], directory, "", 1)
+		lineNumber := locationParts[1]
+		columnNumber := locationParts[2]
+
+		resultEntry := map[string]interface{}{
+			"complexity": complexity,
+			"function":   function,
+			"package":    pkg,
+			"path":       filePath,
+			"line":       lineNumber,
+			"column":     columnNumber,
+		}
+
+		categorizedResults[utils.COMPLEX_FUNCTIONS] = append(categorizedResults[utils.COMPLEX_FUNCTIONS], resultEntry)
 	}
 
 	return categorizedResults

@@ -1,9 +1,9 @@
 package api
 
 import (
+	"armur-codescanner/internal/middleware"
 	"armur-codescanner/internal/tasks"
 	utils "armur-codescanner/pkg"
-	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -43,13 +43,12 @@ func ScanHandler(c *gin.Context) {
 		return
 	}
 
-	// Validate repository URL and language
-	if request.RepositoryURL == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Repository URL is required"})
+	if err := middleware.ValidateGitURL(request.RepositoryURL); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	if request.Language != "" && request.Language != "go" && request.Language != "py" && request.Language != "js" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid language"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid language: must be one of go, py, js"})
 		return
 	}
 
@@ -83,12 +82,12 @@ func AdvancedScanResult(c *gin.Context) {
 		return
 	}
 
-	if request.RepositoryURL == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Repository URL is required"})
+	if err := middleware.ValidateGitURL(request.RepositoryURL); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	if request.Language != "" && request.Language != "go" && request.Language != "py" && request.Language != "js" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid language"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid language: must be one of go, py, js"})
 		return
 	}
 
@@ -160,6 +159,10 @@ func ScanFile(c *gin.Context) {
 // @Router /api/v1/status/{task_id} [get]
 func TaskStatus(c *gin.Context) {
 	taskID := c.Param("task_id")
+	if !middleware.ValidateTaskID(taskID) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid task_id format"})
+		return
+	}
 
 	result, err := tasks.GetTaskResult(taskID)
 	if err != nil {
@@ -189,10 +192,13 @@ func TaskStatus(c *gin.Context) {
 // @Router /api/v1/reports/owasp/{task_id} [get]
 func TaskOwasp(c *gin.Context) {
 	taskID := c.Param("task_id")
+	if !middleware.ValidateTaskID(taskID) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid task_id format"})
+		return
+	}
 
 	// Fetch task result from Redis
 	taskResult, err := tasks.GetTaskResult(taskID)
-	fmt.Println("taskresult ", taskResult)
 	if err != nil {
 		if err.Error() == "task result not found" {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Task result not found. Pls wait"})
@@ -223,10 +229,13 @@ func TaskOwasp(c *gin.Context) {
 // @Router /api/v1/reports/sans/{task_id} [get]
 func TaskSans(c *gin.Context) {
 	taskID := c.Param("task_id")
+	if !middleware.ValidateTaskID(taskID) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid task_id format"})
+		return
+	}
 
 	// Fetch task result from Redis
 	taskResult, err := tasks.GetTaskResult(taskID)
-	fmt.Println("taskresult ", taskResult)
 	if err != nil {
 		if err.Error() == "task result not found" {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Task result not found. Pls wait"})

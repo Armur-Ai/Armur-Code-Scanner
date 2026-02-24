@@ -1,28 +1,31 @@
 package internal
 
 import (
+	"armur-codescanner/internal/logger"
 	utils "armur-codescanner/pkg"
 	"encoding/json"
-	"log"
 	"os/exec"
 	"strings"
 )
 
 func RunOSVScanner(directory string) (map[string]interface{}, error) {
-	log.Println("Running OSV-Scanner...")
+	logger.Info().Str("tool", "osv-scanner").Str("dir", directory).Msg("running")
 	result, err := runOSVScannerOnRepo(directory)
 	if err != nil {
-		return nil, err
+		logger.Warn().Str("tool", "osv-scanner").Err(err).Msg("tool execution failed, returning partial results")
+		return utils.ConvertCategorizedResults(utils.InitAdvancedCategorizedResults()), err
 	}
 	ans := categorizeOSVResults(result, directory)
-	//fmt.Println(ans)
-	newcat := utils.ConvertCategorizedResults(ans)
-	return newcat, nil
+	return utils.ConvertCategorizedResults(ans), nil
 }
 
 func runOSVScannerOnRepo(directory string) (string, error) {
 	cmd := exec.Command("osv-scanner", "--format", "json", directory)
-	output, _ := cmd.Output()
+	output, err := cmd.Output()
+	if err != nil {
+		// osv-scanner exits non-zero when vulnerabilities are found
+		logger.Debug().Str("tool", "osv-scanner").Err(err).Msg("non-zero exit (may still have results)")
+	}
 	return string(output), nil
 }
 
@@ -54,7 +57,7 @@ func categorizeOSVResults(results string, directory string) map[string][]interfa
 
 	err := json.Unmarshal([]byte(results), &osvResults)
 	if err != nil {
-		log.Printf("Failed to parse OSV-Scanner output: %v", err)
+		logger.Error().Str("tool", "osv-scanner").Err(err).Msg("failed to parse output")
 		return categorizedResults
 	}
 

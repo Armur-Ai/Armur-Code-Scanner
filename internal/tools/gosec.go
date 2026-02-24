@@ -1,11 +1,11 @@
 package internal
 
 import (
+	"armur-codescanner/internal/logger"
 	utils "armur-codescanner/pkg"
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -34,13 +34,15 @@ func GetPracticesFromJSON(data []CWEData, language string, cwe string) map[strin
 	return map[string]string{}
 }
 
-func RunGosec(directory string) map[string]interface{} {
-	log.Println("Running Gosec")
-	results, _ := RunGosecOnRepo(directory)
-
+func RunGosec(directory string) (map[string]interface{}, error) {
+	logger.Info().Str("tool", "gosec").Str("dir", directory).Msg("running")
+	results, err := RunGosecOnRepo(directory)
+	if err != nil {
+		logger.Warn().Str("tool", "gosec").Err(err).Msg("tool execution failed, returning partial results")
+		return utils.ConvertCategorizedResults(utils.InitCategorizedResults()), err
+	}
 	categorizedResults := CategorizeGosecResults(results, directory)
-	newcategorizedResults := utils.ConvertCategorizedResults(categorizedResults)
-	return newcategorizedResults
+	return utils.ConvertCategorizedResults(categorizedResults), nil
 }
 
 func RunGosecOnRepo(directory string) (string, error) {
@@ -51,43 +53,36 @@ func RunGosecOnRepo(directory string) (string, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	cmd.Run()
-	fmt.Println(stdout.String())
+	logger.Debug().Str("tool", "gosec").Int("output_bytes", stdout.Len()).Msg("raw output received")
 	return stdout.String(), nil
 }
 
 func CategorizeGosecResults(results string, directory string) map[string][]interface{} {
 	categorizedResults := utils.InitCategorizedResults()
 
-	// Read the CWE JSON file
+	var cweData []CWEData
 	cweDataFile, err := os.ReadFile("pkg/common/cwd.json")
 	if err != nil {
-		log.Printf("Error reading CWE JSON: %v", err)
-		return categorizedResults
-	}
-
-	var cweData []CWEData
-	if err := json.Unmarshal(cweDataFile, &cweData); err != nil {
-		log.Printf("Error parsing CWE JSON: %v", err)
-		return categorizedResults
+		logger.Warn().Str("tool", "gosec").Err(err).Msg("CWE data unavailable, skipping practice enrichment")
+	} else if err := json.Unmarshal(cweDataFile, &cweData); err != nil {
+		logger.Warn().Str("tool", "gosec").Err(err).Msg("failed to parse CWE JSON, skipping practice enrichment")
 	}
 
 	if results != "" {
 		var parsedResults map[string]interface{}
 		if err := json.Unmarshal([]byte(results), &parsedResults); err != nil {
-			log.Printf("Error parsing Gosec results: %v", err)
+			logger.Error().Str("tool", "gosec").Err(err).Msg("failed to parse results")
 			return categorizedResults
 		}
 
-		// Process Issues
 		if issues, ok := parsedResults["Issues"].([]interface{}); ok {
 			for _, issue := range issues {
 				issueMap, mapOk := issue.(map[string]interface{})
 				if !mapOk {
-					log.Printf("Invalid issue format: %v", issue)
+					logger.Debug().Str("tool", "gosec").Msgf("skipping invalid issue format: %v", issue)
 					continue
 				}
 
-				// Extract CWE ID
 				cweID := "unknown"
 				if cweObj, ok := issueMap["cwe"].(map[string]interface{}); ok {
 					if id, ok := cweObj["id"].(string); ok {
@@ -109,30 +104,27 @@ func CategorizeGosecResults(results string, directory string) map[string][]inter
 					"endLine":    issueMap["line"],
 				}
 
-				// Update practices
 				practices := GetPracticesFromJSON(cweData, "go", cweID)
 				for key, value := range practices {
 					formattedIssue[key] = value
 				}
 
-				// Append formatted issue to SECURITY_ISSUES
 				categorizedResults[SECURITY_ISSUES] = append(categorizedResults[SECURITY_ISSUES], formattedIssue)
 			}
 		}
 
-		// Process Golang Errors
 		if golangErrors, ok := parsedResults["Golang errors"].(map[string]interface{}); ok {
 			for path, errors := range golangErrors {
 				errorList, listOk := errors.([]interface{})
 				if !listOk {
-					log.Printf("Invalid Golang errors format for path %s: %v", path, errors)
+					logger.Debug().Str("tool", "gosec").Msgf("invalid Golang errors format for path %s", path)
 					continue
 				}
 
 				for _, err := range errorList {
 					errorMap, mapOk := err.(map[string]interface{})
 					if !mapOk {
-						log.Printf("Invalid error format: %v", err)
+						logger.Debug().Str("tool", "gosec").Msgf("invalid error format: %v", err)
 						continue
 					}
 
@@ -143,7 +135,6 @@ func CategorizeGosecResults(results string, directory string) map[string][]inter
 						"message": fmt.Sprintf("%v", errorMap["error"]),
 					}
 
-					// Append antipatterns bug to ANTIPATTERNS_BUGS
 					categorizedResults[ANTIPATTERNS_BUGS] = append(categorizedResults[ANTIPATTERNS_BUGS], antipatternsBug)
 				}
 			}

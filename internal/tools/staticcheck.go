@@ -1,34 +1,25 @@
 package internal
 
 import (
+	"armur-codescanner/internal/logger"
 	utils "armur-codescanner/pkg"
 	"bytes"
 	"encoding/json"
-	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 )
 
-func RunStaticCheck(directory string) map[string]interface{} {
-
-	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("Error while running Staticcheck: %v", r)
-		}
-	}()
-
-	log.Println("Running Staticcheck")
+func RunStaticCheck(directory string) (map[string]interface{}, error) {
+	logger.Info().Str("tool", "staticcheck").Str("dir", directory).Msg("running")
 	staticcheckResults, err := RunStaticcheckOnRepo(directory)
 	if err != nil {
-		log.Printf("Error while running Staticcheck: %v", err)
-		return nil
+		logger.Warn().Str("tool", "staticcheck").Err(err).Msg("tool execution failed, returning partial results")
+		return utils.ConvertCategorizedResults(utils.InitCategorizedResults()), err
 	}
 	newcategorisedresult := CategorizeStaticcheckResults(staticcheckResults, directory)
-	newcatresult := utils.ConvertCategorizedResults(newcategorisedresult)
-	return newcatresult
+	return utils.ConvertCategorizedResults(newcategorisedresult), nil
 }
 
 func RunStaticcheckOnRepo(directory string) (string, error) {
@@ -67,47 +58,46 @@ func RunStaticcheckOnRepo(directory string) (string, error) {
 func CategorizeStaticcheckResults(results string, directory string) map[string][]interface{} {
 	categorizedResults := utils.InitCategorizedResults()
 
-	if results != "" {
-		issues := strings.Split(results, "\n")
-
-		for _, issue := range issues {
-			issue = strings.TrimSpace(issue)
-			if issue == "" {
-				continue
-			}
-
-			var jsonIssue map[string]interface{}
-			err := json.Unmarshal([]byte(issue), &jsonIssue)
-			if err != nil {
-				log.Printf("Error parsing issue JSON: %v", err)
-				continue
-			}
-
-			code, ok := jsonIssue["code"].(string)
-			if !ok {
-				log.Printf("Invalid issue code: %+v", jsonIssue)
-				continue
-			}
-			fmt.Println(code)
-			if strings.HasPrefix(code, "ST") {
-				categorizedResults[utils.DOCKSTRING_ABSENT] = append(categorizedResults[utils.DOCKSTRING_ABSENT], FormatIssueForStatic(jsonIssue, directory))
-			} else if strings.HasPrefix(code, "SA2") || strings.HasPrefix(code, "SA1") {
-				categorizedResults[utils.COMPLEX_FUNCTIONS] = append(categorizedResults[utils.COMPLEX_FUNCTIONS], FormatIssueForStatic(jsonIssue, directory))
-			} else {
-				log.Printf("Unmatched issue: %+v", jsonIssue)
-			}
-		}
-	} else {
-		log.Println("No results found from Staticcheck.")
+	if results == "" {
+		logger.Debug().Str("tool", "staticcheck").Msg("no results found")
+		return categorizedResults
 	}
-	fmt.Println(categorizedResults)
+
+	issues := strings.Split(results, "\n")
+	for _, issue := range issues {
+		issue = strings.TrimSpace(issue)
+		if issue == "" {
+			continue
+		}
+
+		var jsonIssue map[string]interface{}
+		err := json.Unmarshal([]byte(issue), &jsonIssue)
+		if err != nil {
+			logger.Debug().Str("tool", "staticcheck").Err(err).Msg("failed to parse issue JSON, skipping")
+			continue
+		}
+
+		code, ok := jsonIssue["code"].(string)
+		if !ok {
+			logger.Debug().Str("tool", "staticcheck").Msgf("invalid issue code: %+v", jsonIssue)
+			continue
+		}
+		if strings.HasPrefix(code, "ST") {
+			categorizedResults[utils.DOCKSTRING_ABSENT] = append(categorizedResults[utils.DOCKSTRING_ABSENT], FormatIssueForStatic(jsonIssue, directory))
+		} else if strings.HasPrefix(code, "SA2") || strings.HasPrefix(code, "SA1") {
+			categorizedResults[utils.COMPLEX_FUNCTIONS] = append(categorizedResults[utils.COMPLEX_FUNCTIONS], FormatIssueForStatic(jsonIssue, directory))
+		} else {
+			logger.Debug().Str("tool", "staticcheck").Msgf("unmatched issue code: %s", code)
+		}
+	}
+
 	return categorizedResults
 }
 
 func FormatIssueForStatic(issue map[string]interface{}, directory string) map[string]interface{} {
 	location, ok := issue["location"].(map[string]interface{})
 	if !ok {
-		log.Printf("Invalid issue location: %+v", issue)
+		logger.Debug().Str("tool", "staticcheck").Msgf("invalid issue location: %+v", issue)
 		return nil
 	}
 

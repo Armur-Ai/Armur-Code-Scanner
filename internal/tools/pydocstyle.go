@@ -1,20 +1,19 @@
 package internal
 
 import (
+	"armur-codescanner/internal/logger"
 	utils "armur-codescanner/pkg"
 	"bytes"
-	"log"
 	"os/exec"
 	"regexp"
 	"strings"
 )
 
-func RunPydocstyle(directory string) map[string]interface{} {
-	log.Println("Running Pydocstyle...")
+func RunPydocstyle(directory string) (map[string]interface{}, error) {
+	logger.Info().Str("tool", "pydocstyle").Str("dir", directory).Msg("running")
 	pydocstyleResults := RunPydocstyleOnRepo(directory)
 	categorizedResults := CategorizePydocstyleResults(pydocstyleResults, directory)
-	newcattu := utils.ConvertCategorizedResults(categorizedResults)
-	return newcattu
+	return utils.ConvertCategorizedResults(categorizedResults), nil
 }
 
 func RunPydocstyleOnRepo(directory string) string {

@@ -1,11 +1,11 @@
 package internal
 
 import (
+	"armur-codescanner/internal/logger"
 	utils "armur-codescanner/pkg"
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -31,12 +31,11 @@ type BanditIssue struct {
 	EndLine    int      `json:"endLine"`
 }
 
-func RunBandit(directory string) map[string]interface{} {
-	log.Println("Running Bandit...")
+func RunBandit(directory string) (map[string]interface{}, error) {
+	logger.Info().Str("tool", "bandit").Str("dir", directory).Msg("running")
 	results := RunBanditOnRepo(directory)
 	categorizedResults := CategorizeBanditResults(results)
-	newcatresult := utils.ConvertCategorizedResults(categorizedResults)
-	return newcatresult
+	return utils.ConvertCategorizedResults(categorizedResults), nil
 }
 
 func RunBanditOnRepo(directory string) string {
@@ -51,25 +50,21 @@ func RunBanditOnRepo(directory string) string {
 func CategorizeBanditResults(results string) map[string][]interface{} {
 	categorizedResults := utils.InitCategorizedResults()
 
-	// Return early if the results string is empty or whitespace
 	if strings.TrimSpace(results) == "" {
-		log.Println("No results to categorize.")
+		logger.Debug().Str("tool", "bandit").Msg("no results to categorize")
 		return categorizedResults
 	}
 
-	// Parse JSON input
 	var parsedResults map[string]interface{}
 	err := json.Unmarshal([]byte(results), &parsedResults)
 	if err != nil {
-		log.Printf("Failed to parse Bandit results: %v\n", err)
+		logger.Error().Str("tool", "bandit").Err(err).Msg("failed to parse results")
 		return categorizedResults
 	}
 
-	// Process each issue in the results
 	if issues, ok := parsedResults["results"].([]interface{}); ok {
 		for _, rawIssue := range issues {
 			if issueMap, ok := rawIssue.(map[string]interface{}); ok {
-				// Extract issue details with type assertions
 				fullPath, _ := issueMap["filename"].(string)
 				fileName := filepath.Base(fullPath)
 				line, _ := issueMap["line_number"].(float64)
@@ -78,13 +73,11 @@ func CategorizeBanditResults(results string) map[string][]interface{} {
 				testID, _ := issueMap["test_id"].(string)
 				confidence, _ := issueMap["issue_confidence"].(string)
 
-				// Convert CWE if available
 				cwe := []string{}
 				if testID != "" {
 					cwe = append(cwe, fmt.Sprintf("CWE-%s: %s", testID, message))
 				}
 
-				// Create BanditIssue
 				issue := BanditIssue{
 					Path:       fileName,
 					Line:       int(line),
@@ -92,13 +85,12 @@ func CategorizeBanditResults(results string) map[string][]interface{} {
 					Severity:   strings.ToUpper(severity),
 					TestID:     testID,
 					Confidence: strings.ToUpper(confidence),
-					Likelihood: "LOW", // Default value
+					Likelihood: "LOW",
 					CWE:        cwe,
 					Owasp:      []string{"A07:2017 - Cross-Site Scripting (XSS)", "A03:2021 - Injection"},
 					EndLine:    int(line),
 				}
 
-				// Convert BanditIssue to map[string]interface{}
 				issueMapConverted := map[string]interface{}{
 					"path":       issue.Path,
 					"line":       issue.Line,
@@ -112,7 +104,6 @@ func CategorizeBanditResults(results string) map[string][]interface{} {
 					"endLine":    issue.EndLine,
 				}
 
-				// Add to the SECURITY_ISSUES category
 				categorizedResults[SECURITY_ISSUES] = append(categorizedResults[SECURITY_ISSUES], issueMapConverted)
 			}
 		}

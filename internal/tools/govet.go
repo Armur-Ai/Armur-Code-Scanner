@@ -1,26 +1,19 @@
 package internal
 
 import (
+	"armur-codescanner/internal/logger"
 	utils "armur-codescanner/pkg"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 )
 
-func RunGovet(directory string) map[string]interface{} {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("Error while running Govet: %v", r)
-		}
-	}()
-
-	log.Println("Running Govet")
+func RunGovet(directory string) (map[string]interface{}, error) {
+	logger.Info().Str("tool", "govet").Str("dir", directory).Msg("running")
 	govetResults := runGovetOnRepo(directory)
 	categorizedResults := categorizeGovetResults(govetResults, directory)
-	catcategorizedResults := utils.ConvertCategorizedResults(categorizedResults)
-	return catcategorizedResults
+	return utils.ConvertCategorizedResults(categorizedResults), nil
 }
 
 func runGovetOnRepo(directory string) string {
@@ -42,7 +35,7 @@ func runGovetOnRepo(directory string) string {
 		return nil
 	})
 	if err != nil {
-		log.Printf("Error scanning Go files: %v", err)
+		logger.Error().Str("tool", "govet").Err(err).Msg("failed to scan Go files")
 	}
 
 	if len(files) == 0 {
@@ -53,7 +46,7 @@ func runGovetOnRepo(directory string) string {
 	cmd.Dir = directory
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Printf("Error scanning Go files: %v", err)
+		logger.Debug().Str("tool", "govet").Err(err).Msg("non-zero exit (may still have results)")
 	}
 	return strings.TrimSpace(string(output))
 }

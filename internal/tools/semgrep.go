@@ -1,70 +1,73 @@
 package internal
 
 import (
+	"armur-codescanner/internal/logger"
 	utils "armur-codescanner/pkg"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os/exec"
 	"strings"
 )
 
-func RunSemgrep(directory string, rules string) map[string]interface{} {
-	log.Println("Running Semgrep...")
-	semgrepResults := runSemgrepOnRepo(directory, "--config=auto")
+func RunSemgrep(directory string, rules string) (map[string]interface{}, error) {
+	logger.Info().Str("tool", "semgrep").Str("dir", directory).Msg("running")
+	semgrepResults, err := runSemgrepOnRepo(directory, "--config=auto")
+	if err != nil {
+		logger.Warn().Str("tool", "semgrep").Err(err).Msg("tool execution failed, returning partial results")
+		return utils.ConvertCategorizedResults(utils.InitCategorizedResults()), err
+	}
 	categorizedResults := CategorizeSemgrepResults(semgrepResults, directory)
 	newcatresult := utils.ConvertCategorizedResults(categorizedResults)
-	fmt.Println(newcatresult)
-	return newcatresult
+	return newcatresult, nil
 }
 
-func runSemgrepOnRepo(directory string, rules string) string {
+func runSemgrepOnRepo(directory string, rules string) (string, error) {
 	cmd := exec.Command("semgrep", rules, directory, "--json")
-	output, _ := cmd.Output()
-	return string(output)
+	output, err := cmd.Output()
+	if err != nil {
+		// semgrep exits non-zero when it finds issues; treat stdout as valid output
+		logger.Debug().Str("tool", "semgrep").Err(err).Msg("non-zero exit (may still have results)")
+	}
+	return string(output), nil
 }
 
 func CategorizeSemgrepResults(results string, directory string) map[string][]interface{} {
 	categorizedResults := utils.InitCategorizedResults()
 
-	// Load CWE data
 	data, err := utils.LoadCWEData("pkg/common/cwd.json")
 	if err != nil {
-		log.Printf("Error loading CWE data: %v", err)
-		return categorizedResults
+		logger.Warn().Str("tool", "semgrep").Err(err).Msg("CWE data unavailable, skipping practice enrichment")
 	}
 
 	if results != "" {
 		var parsedResults map[string]interface{}
 		err := json.Unmarshal([]byte(results), &parsedResults)
 		if err != nil {
-			log.Printf("Error parsing Semgrep results: %v", err)
-			log.Printf("Raw Semgrep results: %s", results) // Log raw input for debugging
+			logger.Error().Str("tool", "semgrep").Err(err).Msg("failed to parse results")
 			return categorizedResults
 		}
 
 		resultsArr, ok := parsedResults["results"].([]interface{})
-		fmt.Println(resultsArr, ok, ok)
 		if !ok {
-			log.Println("No 'results' array found in Semgrep output.")
+			logger.Debug().Str("tool", "semgrep").Msg("no 'results' array found in output")
 			return categorizedResults
 		}
 
 		for _, res := range resultsArr {
 			result, ok := res.(map[string]interface{})
 			if !ok {
-				log.Println("Error processing individual result, skipping.")
+				logger.Debug().Str("tool", "semgrep").Msg("skipping invalid result entry")
 				continue
 			}
 
 			checkID, ok := result["check_id"].(string)
 			if !ok {
-				log.Println("Missing or invalid 'check_id', skipping result.")
+				logger.Debug().Str("tool", "semgrep").Msg("missing or invalid 'check_id', skipping")
 				continue
 			}
 			path, ok := result["path"].(string)
 			if !ok {
-				log.Println("Missing or invalid 'path', skipping result.")
+				logger.Debug().Str("tool", "semgrep").Msg("missing or invalid 'path', skipping")
 				continue
 			}
 
@@ -78,7 +81,6 @@ func CategorizeSemgrepResults(results string, directory string) map[string][]int
 				securityResult := make(map[string]interface{})
 				securityResult["path"] = path
 
-				// Extract other fields with proper type assertions
 				if start, ok := result["start"].(map[string]interface{}); ok {
 					securityResult["line"] = start["line"]
 					securityResult["column"] = start["col"]
@@ -97,7 +99,6 @@ func CategorizeSemgrepResults(results string, directory string) map[string][]int
 					}
 				}
 
-				// Update practices based on CWE
 				if cwe, ok := securityResult["cwe"].([]interface{}); ok && len(cwe) > 0 {
 					practices := utils.GetPracticesFromJSON(data, utils.DetectFileLanguage(path), cwe[0].(string))
 					for key, value := range practices {
@@ -111,7 +112,6 @@ func CategorizeSemgrepResults(results string, directory string) map[string][]int
 				categorizedResults[COMPLEX_FUNCTIONS] = append(categorizedResults[COMPLEX_FUNCTIONS], result)
 
 			default:
-				// Handle antipattern bugs
 				antipatternBug := map[string]interface{}{
 					"column":  fmt.Sprintf("%v", result["start"].(map[string]interface{})["col"]),
 					"line":    fmt.Sprintf("%v", result["start"].(map[string]interface{})["line"]),

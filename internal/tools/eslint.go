@@ -1,11 +1,10 @@
 package internal
 
 import (
+	"armur-codescanner/internal/logger"
 	utils "armur-codescanner/pkg"
 	"bytes"
 	"encoding/json"
-	"fmt"
-	"log"
 	"os/exec"
 	"strings"
 )
@@ -18,51 +17,59 @@ type Issue struct {
 	RuleID  string `json:"ruleId,omitempty"`
 }
 
-func RunESLintAdvanced(directory string) map[string]interface{} {
-	log.Println("Running ESLint Advanced")
+func RunESLintAdvanced(directory string) (map[string]interface{}, error) {
+	logger.Info().Str("tool", "eslint-advanced").Str("dir", directory).Msg("running")
 	results, err := RunESLintAdvancedOnRepo(directory)
 	if err != nil {
-		log.Printf("Error while running ESLint Advanced: %v\n", err)
-		return map[string]interface{}{}
+		logger.Warn().Str("tool", "eslint-advanced").Err(err).Msg("tool execution failed, returning partial results")
+		return utils.ConvertCategorizedResults(utils.InitAdvancedCategorizedResults()), err
 	}
-	newcatresult := utils.ConvertCategorizedResults(results)
-	return newcatresult
+	return utils.ConvertCategorizedResults(results), nil
 }
 
-func RunESLintOnRepo(repoPath string) map[string]interface{} {
+func RunESLintOnRepo(repoPath string) (map[string]interface{}, error) {
 	categorizedResults := utils.InitCategorizedResults()
 
-	// Docstring check
-	log.Println("Running ESLint for docstrings")
-	docResults, _ := RunESLint(repoPath, "eslint_jsdoc.config.js")
-	categorizedResults[DOCKSTRING_ABSENT] = FormatIssues(docResults, repoPath)
+	logger.Info().Str("tool", "eslint-jsdoc").Str("dir", repoPath).Msg("running")
+	docResults, err := RunESLint(repoPath, "eslint_jsdoc.config.js")
+	if err != nil {
+		logger.Warn().Str("tool", "eslint-jsdoc").Err(err).Msg("jsdoc check failed")
+	} else {
+		categorizedResults[DOCKSTRING_ABSENT] = FormatIssues(docResults, repoPath)
+	}
 
-	// Security check
-	log.Println("Running ESLint for security issues")
-	securityResults, _ := RunESLint(repoPath, "eslint_security.config.js")
-	categorizedResults[SECURITY_ISSUES] = FormatIssues(securityResults, repoPath)
+	logger.Info().Str("tool", "eslint-security").Str("dir", repoPath).Msg("running")
+	securityResults, err := RunESLint(repoPath, "eslint_security.config.js")
+	if err != nil {
+		logger.Warn().Str("tool", "eslint-security").Err(err).Msg("security check failed")
+	} else {
+		categorizedResults[SECURITY_ISSUES] = FormatIssues(securityResults, repoPath)
+	}
 
-	// Complex functions and antipatterns
-	log.Println("Running ESLint for complex functions and antipatterns")
-	complexResults, _ := RunESLint(repoPath, "eslint.config.js")
-	categorizedComplex := CategorizeESLintResults(complexResults, repoPath)
-	categorizedResults[COMPLEX_FUNCTIONS] = categorizedComplex[COMPLEX_FUNCTIONS]
-	categorizedResults[ANTIPATTERNS_BUGS] = categorizedComplex[ANTIPATTERNS_BUGS]
-	newcatresult := utils.ConvertCategorizedResults(categorizedResults)
-	return newcatresult
+	logger.Info().Str("tool", "eslint-complexity").Str("dir", repoPath).Msg("running")
+	complexResults, err := RunESLint(repoPath, "eslint.config.js")
+	if err != nil {
+		logger.Warn().Str("tool", "eslint-complexity").Err(err).Msg("complexity check failed")
+	} else {
+		categorizedComplex := CategorizeESLintResults(complexResults, repoPath)
+		categorizedResults[COMPLEX_FUNCTIONS] = categorizedComplex[COMPLEX_FUNCTIONS]
+		categorizedResults[ANTIPATTERNS_BUGS] = categorizedComplex[ANTIPATTERNS_BUGS]
+	}
 
+	return utils.ConvertCategorizedResults(categorizedResults), nil
 }
 
 func RunESLintAdvancedOnRepo(repoPath string) (map[string][]interface{}, error) {
 	categorizedResults := utils.InitAdvancedCategorizedResults()
 
-	// Run ESLint for dead code
 	cmd := exec.Command("eslint", "--format", "json", "--config", "eslint_deadcode.config.js", repoPath)
-	output, _ := cmd.Output()
-	fmt.Println(string(output))
-	var eslintOutput []map[string]interface{}
-	err := json.Unmarshal(output, &eslintOutput)
+	output, err := cmd.Output()
 	if err != nil {
+		logger.Debug().Str("tool", "eslint-deadcode").Err(err).Msg("non-zero exit (may still have results)")
+	}
+
+	var eslintOutput []map[string]interface{}
+	if err := json.Unmarshal(output, &eslintOutput); err != nil {
 		return nil, err
 	}
 
@@ -120,12 +127,13 @@ func RunESLint(directory, configFile string) ([]map[string]interface{}, error) {
 
 	err := cmd.Run()
 	if err != nil {
-		log.Println("error running ESLint: ", err)
+		// ESLint exits non-zero when it finds issues; that's expected
+		logger.Debug().Str("tool", "eslint").Str("config", configFile).Err(err).Msg("non-zero exit (may still have results)")
 	}
 	var results []map[string]interface{}
 	err = json.Unmarshal(stdout.Bytes(), &results)
 	if err != nil {
-		log.Printf("Error parsing ESLint results: %v", err)
+		logger.Error().Str("tool", "eslint").Str("config", configFile).Err(err).Msg("failed to parse results")
 		return nil, err
 	}
 

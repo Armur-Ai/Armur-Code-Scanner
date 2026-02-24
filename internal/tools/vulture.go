@@ -1,19 +1,21 @@
 package internal
 
 import (
+	"armur-codescanner/internal/logger"
 	utils "armur-codescanner/pkg"
 	"os/exec"
 	"strings"
 )
 
 func RunVulture(directory string) (map[string]interface{}, error) {
+	logger.Info().Str("tool", "vulture").Str("dir", directory).Msg("running")
 	vultureResults, err := runVultureOnRepo(directory)
 	if err != nil {
-		return nil, err
+		logger.Warn().Str("tool", "vulture").Err(err).Msg("tool execution failed, returning partial results")
+		return utils.ConvertCategorizedResults(utils.InitAdvancedCategorizedResults()), err
 	}
 	ans := categorizeVultureResults(vultureResults, directory)
-	newcat := utils.ConvertCategorizedResults(ans)
-	return newcat, nil
+	return utils.ConvertCategorizedResults(ans), nil
 }
 
 func runVultureOnRepo(directory string) (string, error) {
@@ -32,7 +34,6 @@ func categorizeVultureResults(vultureResults string, directory string) map[strin
 		for _, line := range lines {
 			match := strings.SplitN(line, ":", 3)
 			if len(match) == 3 {
-				// Create a result map for each line
 				result := map[string]interface{}{
 					"file":    strings.Replace(match[0], directory, "", 1),
 					"line":    match[1],

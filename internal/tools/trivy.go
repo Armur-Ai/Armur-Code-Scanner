@@ -1,12 +1,11 @@
 package internal
 
 import (
+	"armur-codescanner/internal/logger"
+	utils "armur-codescanner/pkg"
 	"encoding/json"
-	"log"
 	"os/exec"
 	"strings"
-
-	utils "armur-codescanner/pkg"
 )
 
 type TrivyResult struct {
@@ -41,13 +40,15 @@ type TrivyResult struct {
 	} `json:"Results"`
 }
 
-func RunTrivy(target string) map[string]interface{} {
-	log.Println("Running Trivy")
+func RunTrivy(target string) (map[string]interface{}, error) {
+	logger.Info().Str("tool", "trivy").Str("target", target).Msg("running")
 	cmd := exec.Command("trivy", "fs", "--format", "json", target)
-	output, _ := cmd.Output()
+	output, err := cmd.Output()
+	if err != nil {
+		logger.Debug().Str("tool", "trivy").Err(err).Msg("non-zero exit (may still have results)")
+	}
 	ans := categorizeTrivyResults(string(output))
-	newcat := utils.ConvertCategorizedResults(ans)
-	return newcat
+	return utils.ConvertCategorizedResults(ans), nil
 }
 
 func categorizeTrivyResults(results string) map[string][]interface{} {
@@ -56,7 +57,7 @@ func categorizeTrivyResults(results string) map[string][]interface{} {
 	var trivyResults TrivyResult
 	err := json.Unmarshal([]byte(results), &trivyResults)
 	if err != nil {
-		log.Printf("Failed to parse Trivy results: %v", err)
+		logger.Error().Str("tool", "trivy").Err(err).Msg("failed to parse results")
 		return categorizedResults
 	}
 

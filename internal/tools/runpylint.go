@@ -1,20 +1,19 @@
 package internal
 
 import (
+	"armur-codescanner/internal/logger"
 	utils "armur-codescanner/pkg"
 	"bytes"
 	"encoding/json"
-	"log"
 	"os/exec"
 	"strings"
 )
 
-func RunPylint(directory string) map[string]interface{} {
-	log.Println("Running Pylint...")
+func RunPylint(directory string) (map[string]interface{}, error) {
+	logger.Info().Str("tool", "pylint").Str("dir", directory).Msg("running")
 	pylintOutput := RunPylintOnRepo(directory)
 	categorizedResults := CategorizePylintResults(pylintOutput, directory)
-	newcatresult := utils.ConvertCategorizedResults(categorizedResults)
-	return newcatresult
+	return utils.ConvertCategorizedResults(categorizedResults), nil
 }
 
 func RunPylintOnRepo(directory string) string {
@@ -29,25 +28,21 @@ func RunPylintOnRepo(directory string) string {
 }
 
 func CategorizePylintResults(results string, directory string) map[string][]interface{} {
-	// Initialize categorized results
 	categorizedResults := utils.InitCategorizedResults()
 
 	if results != "" {
-		// Parse the JSON results from Pylint
 		var parsedResults []map[string]interface{}
 		err := json.Unmarshal([]byte(results), &parsedResults)
 		if err != nil {
-			log.Printf("Error parsing Pylint results: %v\n", err)
+			logger.Error().Str("tool", "pylint").Err(err).Msg("failed to parse results")
 			return categorizedResults
 		}
 
-		// Normalize file paths and convert to []interface{}
 		directory = strings.Replace(directory, "/armur/", "", -1)
 		for _, result := range parsedResults {
 			if path, ok := result["path"].(string); ok {
 				result["path"] = strings.Replace(path, directory, "", -1)
 			}
-			// Append each map[string]interface{} as interface{}
 			categorizedResults[ANTIPATTERNS_BUGS] = append(categorizedResults[ANTIPATTERNS_BUGS], result)
 		}
 	}

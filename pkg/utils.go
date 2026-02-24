@@ -1,11 +1,10 @@
 package utils
 
 import (
+	"armur-codescanner/internal/logger"
 	pkg "armur-codescanner/pkg/common"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -218,8 +217,7 @@ func ReformatInfraSecurity(results map[string]interface{}) []map[string]interfac
 }
 
 func LoadCWEData(filePath string) ([]CWEData, error) {
-	// Read the file
-	file, err := ioutil.ReadFile(filePath)
+	file, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading file: %v", err)
 	}
@@ -256,13 +254,13 @@ func ReformatComplexFunctions(results map[string]interface{}) []map[string]inter
 
 	issues, ok := results[COMPLEX_FUNCTIONS]
 	if !ok || issues == nil {
-		log.Printf("No COMPLEX_FUNCTIONS key or it is nil")
+		logger.Debug().Msg("no COMPLEX_FUNCTIONS key or it is nil")
 		return nil
 	}
 
 	issueList, ok := issues.([]interface{})
 	if !ok {
-		log.Printf("COMPLEX_FUNCTIONS is not a []interface{}")
+		logger.Debug().Msg("COMPLEX_FUNCTIONS is not a []interface{}")
 		return nil
 	}
 
@@ -310,7 +308,7 @@ func ReformatSecurityIssues(results map[string]interface{}) []map[string]interfa
 		for _, issue := range securityIssues {
 			issueMap, ok := issue.(map[string]interface{})
 			if !ok {
-				fmt.Println("Skipping invalid issue format")
+				logger.Debug().Msg("skipping invalid issue format")
 				continue
 			}
 
@@ -322,10 +320,10 @@ func ReformatSecurityIssues(results map[string]interface{}) []map[string]interfa
 				if firstCWE, ok := cweInterfaceArray[0].(string); ok {
 					cweKey = firstCWE
 				} else {
-					fmt.Println("Invalid CWE format in array:", cweInterfaceArray)
+					logger.Debug().Msgf("invalid CWE format in array: %v", cweInterfaceArray)
 				}
 			} else {
-				fmt.Println("CWE not found or invalid type:", issueMap["cwe"])
+				logger.Debug().Msgf("CWE not found or invalid type: %v", issueMap["cwe"])
 			}
 
 			path, _ := issueMap["path"].(string)
@@ -337,7 +335,7 @@ func ReformatSecurityIssues(results map[string]interface{}) []map[string]interfa
 			securityGroupedIssues[cweKey][path] = append(securityGroupedIssues[cweKey][path], issue)
 		}
 	} else {
-		fmt.Println("No 'security_issues' found or invalid format")
+		logger.Debug().Msg("no 'security_issues' found or invalid format")
 	}
 
 	// Convert the grouped map into the desired structure

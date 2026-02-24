@@ -1,9 +1,9 @@
 package internal
 
 import (
+	"armur-codescanner/internal/logger"
 	utils "armur-codescanner/pkg"
 	"encoding/json"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -13,23 +13,22 @@ const (
 	DUPLICATE_CODE_LINE_THRESHOLD = 10
 )
 
-func RunJSCPD(directory string) map[string]interface{} {
-	log.Println("Running jscpd")
+func RunJSCPD(directory string) (map[string]interface{}, error) {
+	logger.Info().Str("tool", "jscpd").Str("dir", directory).Msg("running")
 	duplicates, err := RunJSCPDOnRepo(directory)
 	if err != nil {
-		log.Printf("Error while running jscpd: %v", err)
-		return nil
+		logger.Warn().Str("tool", "jscpd").Err(err).Msg("tool execution failed, returning partial results")
+		return utils.ConvertCategorizedResults(utils.InitAdvancedCategorizedResults()), err
 	}
 	results := CategorizeJSCPDResults(duplicates, directory)
-	newcatresult := utils.ConvertCategorizedResults(results)
-	return newcatresult
+	return utils.ConvertCategorizedResults(results), nil
 }
 
 func RunJSCPDOnRepo(directory string) ([]map[string]interface{}, error) {
 	cmd := exec.Command("jscpd", directory, "-r", "json", "-o", ".")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Printf("Failed to run jscpd: %v, Output: %s", err, string(output))
+		logger.Warn().Str("tool", "jscpd").Err(err).Str("output", string(output)).Msg("tool exited with error")
 		return nil, err
 	}
 
@@ -37,19 +36,19 @@ func RunJSCPDOnRepo(directory string) ([]map[string]interface{}, error) {
 	if _, err := os.Stat(outputFile); err == nil {
 		file, err := os.Open(outputFile)
 		if err != nil {
-			log.Printf("Failed to open report file: %v", err)
+			logger.Error().Str("tool", "jscpd").Err(err).Msg("failed to open report file")
 			return nil, err
 		}
 		defer file.Close()
 
 		var report map[string]interface{}
 		if err := json.NewDecoder(file).Decode(&report); err != nil {
-			log.Printf("Failed to parse JSON report: %v", err)
+			logger.Error().Str("tool", "jscpd").Err(err).Msg("failed to parse JSON report")
 			return nil, err
 		}
 		duplicates, ok := report["duplicates"].([]interface{})
 		if !ok {
-			log.Println("No duplicates found in the report")
+			logger.Debug().Str("tool", "jscpd").Msg("no duplicates found in report")
 			return nil, nil
 		}
 
@@ -62,7 +61,7 @@ func RunJSCPDOnRepo(directory string) ([]map[string]interface{}, error) {
 		return result, nil
 	}
 
-	log.Println("No report generated or file not found")
+	logger.Debug().Str("tool", "jscpd").Msg("no report file generated")
 	return nil, nil
 }
 

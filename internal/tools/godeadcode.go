@@ -1,44 +1,42 @@
 package internal
 
 import (
+	"armur-codescanner/internal/logger"
 	utils "armur-codescanner/pkg"
-	"fmt"
-	"log"
 	"os/exec"
 	"strings"
 )
 
-func RunGoDeadcode(directory string) map[string]interface{} {
-	log.Println("Running deadcode")
+func RunGoDeadcode(directory string) (map[string]interface{}, error) {
+	logger.Info().Str("tool", "deadcode").Str("dir", directory).Msg("running")
 	results, err := RunDecodeOnRepO(directory)
 	if err != nil {
-		log.Printf("Error while running deadcode: %v", err)
-		return nil
+		logger.Warn().Str("tool", "deadcode").Err(err).Msg("tool execution failed, returning partial results")
+		return utils.ConvertCategorizedResults(utils.InitAdvancedCategorizedResults()), err
 	}
 	catresult := categorizeDeadCodeResults(results, directory)
-	newcatresult := utils.ConvertCategorizedResults(catresult)
-	return newcatresult
+	return utils.ConvertCategorizedResults(catresult), nil
 }
 
 func RunDecodeOnRepO(directory string) (string, error) {
 	cmd := exec.Command("deadcode", directory)
 	output, err := cmd.CombinedOutput()
-	fmt.Println("Go deadcode Error: ", err)
+	if err != nil {
+		logger.Debug().Str("tool", "deadcode").Err(err).Msg("non-zero exit (may still have results)")
+	}
 	return strings.TrimSpace(string(output)), nil
 }
 
 func categorizeDeadCodeResults(results string, directory string) map[string][]interface{} {
 	categorizedResults := utils.InitAdvancedCategorizedResults()
 
-	// If results are empty or only contain errors, return clean empty results
-	if results == "" || !strings.Contains(results, ":") { // Adjust to detect valid output format
+	if results == "" || !strings.Contains(results, ":") {
 		return categorizedResults
 	}
 
-	// Process results line by line
 	lines := strings.Split(results, "\n")
 	for _, line := range lines {
-		if strings.TrimSpace(line) == "" { // Skip empty lines
+		if strings.TrimSpace(line) == "" {
 			continue
 		}
 		formattedIssue := formatDeadCodeIssue(line, directory)
@@ -53,7 +51,7 @@ func categorizeDeadCodeResults(results string, directory string) map[string][]in
 func formatDeadCodeIssue(issue string, directory string) map[string]interface{} {
 	parts := strings.SplitN(issue, ":", 3)
 	if len(parts) < 3 {
-		return nil // Return nil if the issue format is invalid
+		return nil
 	}
 	return map[string]interface{}{
 		"path":    strings.TrimPrefix(parts[0], directory),
