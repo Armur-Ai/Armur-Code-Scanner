@@ -52,7 +52,6 @@ Thumbs.db
 
 # Test data
 *.testdata
-*_test.go
 
 # Miscellaneous
 *.lock
