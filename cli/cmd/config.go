@@ -98,7 +98,7 @@ func setConfigValue(cfg *config.Config, key, value string) bool {
 	case "redis_url":
 		cfg.Redis.URL = value
 	case "api_key":
-		cfg.APIKey.URL = value
+		cfg.APIKey = value
 	default:
 		return false
 	}

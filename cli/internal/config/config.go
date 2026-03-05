@@ -15,9 +15,7 @@ type Config struct {
 	Redis struct {
 		URL string `json:"url"`
 	} `json:"redis"`
-	APIKey struct {
-		URL string `json:"url"`
-	} `json:"api_key"`
+	APIKey string `json:"api_key"`
 }
 
 // configFilePath is the path to the configuration file.
@@ -28,6 +26,11 @@ func LoadConfig() (*Config, error) {
 	// Default configuration
 	defaultCfg := &Config{}
 	defaultCfg.API.URL = "http://localhost:4500"
+
+	// ARMUR_API_KEY env var takes precedence over config file
+	if key := os.Getenv("ARMUR_API_KEY"); key != "" {
+		defaultCfg.APIKey = key
+	}
 
 	// Create config file if it doesn't exist
 	if _, err := os.Stat(configFilePath); os.IsNotExist(err) {
@@ -44,9 +47,13 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("error unmarshalling config: %w", err)
 	}
 
-	// If config file was empty or API URL was not set, use default
 	if cfg.API.URL == "" {
 		cfg.API.URL = defaultCfg.API.URL
+	}
+
+	// Env var takes precedence over stored key
+	if key := os.Getenv("ARMUR_API_KEY"); key != "" {
+		cfg.APIKey = key
 	}
 
 	return &cfg, nil
@@ -59,7 +66,6 @@ func SaveConfig(cfg *Config) error {
 		return fmt.Errorf("error marshalling config: %w", err)
 	}
 
-	// Create directory if it doesn't exist
 	if err := os.MkdirAll(filepath.Dir(configFilePath), 0755); err != nil {
 		return fmt.Errorf("error creating config directory: %w", err)
 	}

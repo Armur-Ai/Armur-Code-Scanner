@@ -83,7 +83,7 @@ var scanCmd2 = &cobra.Command{
 			}
 		}
 
-		apiClient := api.NewClient(cfg.API.URL)
+		apiClient := api.NewClient(cfg.API.URL).WithAPIKey(cfg.APIKey)
 		var taskID string
 
 		fmt.Println(color.CyanString("Initiating scan..."))
@@ -147,7 +147,11 @@ for security vulnerabilities using the Armur Code Scanner service.`,
 			os.Exit(1)
 		}
 
-		apiClient := api.NewClient(cfg.API.URL)
+		// --api-key flag overrides config file
+		if flagKey, _ := cmd.Root().PersistentFlags().GetString("api-key"); flagKey != "" {
+			cfg.APIKey = flagKey
+		}
+		apiClient := api.NewClient(cfg.API.URL).WithAPIKey(cfg.APIKey)
 		target := args[0]
 		language, _ := cmd.Flags().GetString("language")
 		isAdvanced, _ := cmd.Flags().GetBool("advanced")

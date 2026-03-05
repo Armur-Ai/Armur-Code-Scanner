@@ -95,7 +95,7 @@ var apiCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		req.Header.Add("Authorization", "Bearer "+cfg.APIKey.URL)
+		req.Header.Add("Authorization", "Bearer "+cfg.APIKey)
 		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 		resp, err := client.Do(req)
