@@ -24,66 +24,53 @@ func NewClient(baseURL string) *APIClient {
 
 // ScanRepository initiates a scan of a remote Git repository.
 func (c *APIClient) ScanRepository(repoURL, language string, isAdvanced bool) (string, error) {
-    var endpoint string
-    if isAdvanced {
-        endpoint = "/api/v1/advanced-scan/repo"
-    } else {
-        endpoint = "/api/v1/scan/repo"
-    }
+	var endpoint string
+	if isAdvanced {
+		endpoint = "/api/v1/advanced-scan/repo"
+	} else {
+		endpoint = "/api/v1/scan/repo"
+	}
 
-    // Ensure there is no double slash and no slash after http:
-    fullURL := c.BaseURL + endpoint
-    fullURL = strings.ReplaceAll(fullURL, "http:/", "http:/")
-
-    // For debugging, print the full URL
-    fmt.Println("API Request URL:", fullURL)
-
-    requestBody, err := json.Marshal(map[string]string{
-        "repository_url": repoURL,
-        "language":       language,
-    })
-    if err != nil {
-        return "", fmt.Errorf("error creating request body: %w", err)
-    }
-
-    resp, err := c.HTTPClient.Post(fullURL, "application/json", bytes.NewBuffer(requestBody))
-    if err != nil {
-        return "", fmt.Errorf("error making API request: %w", err)
-    }
-    defer resp.Body.Close()
-
-    if resp.StatusCode != http.StatusOK {
-        return "", fmt.Errorf("API request failed with status code: %d", resp.StatusCode)
-    }
-
-    var result map[string]string
-    if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-        return "", fmt.Errorf("error decoding API response: %w", err)
-    }
-
-    taskID, ok := result["task_id"]
-    if !ok {
-        return "", fmt.Errorf("task_id not found in API response")
-    }
-
-    return taskID, nil
-}
-
-// ScanFile initiates a scan of a local file.
-func (c *APIClient) ScanFile(filePath string, isAdvanced bool) (string, error) {
-	// Note: This function assumes the API can handle a file path.
-	// You may need to modify it based on your API's requirements.
-	endpoint := "/api/v1/scan/file"
-
-	// Ensure there is no double slash and no slash after http:
-	fullURL := c.BaseURL + endpoint
-	fullURL = strings.ReplaceAll(fullURL, "http:/", "http:/")
-
-	// For debugging, print the full URL
-	fmt.Println("API Request URL:", fullURL)
+	fullURL := strings.TrimRight(c.BaseURL, "/") + endpoint
 
 	requestBody, err := json.Marshal(map[string]string{
-		"file_path": filePath, // Sending file path to the API
+		"repository_url": repoURL,
+		"language":       language,
+	})
+	if err != nil {
+		return "", fmt.Errorf("error creating request body: %w", err)
+	}
+
+	resp, err := c.HTTPClient.Post(fullURL, "application/json", bytes.NewBuffer(requestBody))
+	if err != nil {
+		return "", fmt.Errorf("error making API request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("API request failed with status code: %d", resp.StatusCode)
+	}
+
+	var result map[string]string
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", fmt.Errorf("error decoding API response: %w", err)
+	}
+
+	taskID, ok := result["task_id"]
+	if !ok {
+		return "", fmt.Errorf("task_id not found in API response")
+	}
+
+	return taskID, nil
+}
+
+// ScanFile initiates a scan of a local file via multipart upload.
+func (c *APIClient) ScanFile(filePath string, isAdvanced bool) (string, error) {
+	endpoint := "/api/v1/scan/file"
+	fullURL := strings.TrimRight(c.BaseURL, "/") + endpoint
+
+	requestBody, err := json.Marshal(map[string]string{
+		"file_path": filePath,
 	})
 	if err != nil {
 		return "", fmt.Errorf("error creating request body: %w", err)
@@ -114,7 +101,7 @@ func (c *APIClient) ScanFile(filePath string, isAdvanced bool) (string, error) {
 
 // GetTaskStatus retrieves the status of a specific scan task.
 func (c *APIClient) GetTaskStatus(taskID string) (string, map[string]interface{}, error) {
-	endpoint := fmt.Sprintf("%s/api/v1/status/%s", c.BaseURL, taskID)
+	endpoint := fmt.Sprintf("%s/api/v1/status/%s", strings.TrimRight(c.BaseURL, "/"), taskID)
 
 	resp, err := c.HTTPClient.Get(endpoint)
 	if err != nil {
@@ -135,9 +122,7 @@ func (c *APIClient) GetTaskStatus(taskID string) (string, map[string]interface{}
 	if !ok {
 		return "", nil, fmt.Errorf("status not found in API response")
 	}
-	fmt.Println("status: ", status)
 
-	// If the status is "success", try to extract the "data" field
 	var data map[string]interface{}
 	if status == "success" {
 		data, ok = result["data"].(map[string]interface{})
@@ -151,7 +136,7 @@ func (c *APIClient) GetTaskStatus(taskID string) (string, map[string]interface{}
 
 // GetOwaspReport retrieves the OWASP report for a completed scan task.
 func (c *APIClient) GetOwaspReport(taskID string) (interface{}, error) {
-	endpoint := fmt.Sprintf("%s/api/v1/reports/owasp/%s", c.BaseURL, taskID)
+	endpoint := fmt.Sprintf("%s/api/v1/reports/owasp/%s", strings.TrimRight(c.BaseURL, "/"), taskID)
 
 	resp, err := c.HTTPClient.Get(endpoint)
 	if err != nil {
@@ -173,7 +158,7 @@ func (c *APIClient) GetOwaspReport(taskID string) (interface{}, error) {
 
 // GetSansReport retrieves the SANS report for a completed scan task.
 func (c *APIClient) GetSansReport(taskID string) (interface{}, error) {
-	endpoint := fmt.Sprintf("%s/api/v1/reports/sans/%s", c.BaseURL, taskID)
+	endpoint := fmt.Sprintf("%s/api/v1/reports/sans/%s", strings.TrimRight(c.BaseURL, "/"), taskID)
 
 	resp, err := c.HTTPClient.Get(endpoint)
 	if err != nil {
@@ -182,7 +167,7 @@ func (c *APIClient) GetSansReport(taskID string) (interface{}, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("API request failed with status code: %d", resp.StatusCode)
+		return nil, fmt.Errorf("API request failed with status code: %w", err)
 	}
 
 	var report interface{}
