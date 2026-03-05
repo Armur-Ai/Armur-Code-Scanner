@@ -3207,3 +3207,365 @@ teams prioritize and helps management understand risk.
 
 *Last updated: March 2026*
 *Sprints 1–7: original roadmap. Sprints 8–15: CLI/TUI overhaul and core engine. Sprints 16–35: world-class scanner expansion. Sprints 36–45: distribution, adoption, and community flywheel. Sprints 46–50: enterprise hardening, privacy, DAST, mobile, and security governance — added March 2026.*
+
+---
+
+## Sprint 51 — Documentation, README & CLI Reference
+
+Documentation is a first-class product. A developer who can't figure out how to use a tool in
+5 minutes will not use it. This sprint treats every doc as a user-facing feature and ensures
+Armur's documentation is best-in-class — better than Semgrep's, better than Snyk's.
+
+### 51.1 README Complete Rewrite
+
+The current README is minimal. Rewrite it as the primary marketing and onboarding document.
+
+- [ ] **Header section**:
+  - Project logo (SVG, dark + light mode variants)
+  - One-line tagline: "The open-source security scanner that covers everything — SAST, SCA, secrets, IaC, containers, and more."
+  - Badge row: build status · test coverage · Go Report Card · Docker pulls · license · Armur score · latest release
+  - Animated asciinema demo GIF embedded directly in the README (shows `armur run .` from zero to findings in 30 seconds)
+
+- [ ] **Quick Start section** (works end-to-end in a single terminal session):
+  ```bash
+  # Install
+  brew install armur-ai/tap/armur           # macOS/Linux
+  # or: npm install -g @armur/cli           # via npm
+  # or: curl -fsSL https://install.armur.ai | sh  # universal
+
+  # Scan your project (no config needed)
+  cd your-project
+  armur run .
+
+  # Scan a GitHub repository
+  armur run https://github.com/org/repo
+
+  # Check dependencies only
+  armur run . --sca-only
+
+  # Scan a Docker image
+  armur scan --image nginx:latest
+  ```
+
+- [ ] **What Armur detects** — visual grid showing all categories with icons:
+  | Category | Description | Example Tools |
+  |----------|-------------|---------------|
+  | SAST | Code vulnerabilities | semgrep, gosec, bandit, eslint |
+  | SCA | Vulnerable dependencies | osv-scanner, govulncheck, cargo-audit |
+  | Secrets | Hardcoded credentials | gitleaks, trufflehog |
+  | IaC | Cloud misconfigs | tfsec, checkov, kube-linter |
+  | Containers | Image vulnerabilities | trivy, grype |
+  | DAST | Runtime exploitability | zap, nuclei |
+  | Mobile | APK/IPA analysis | mobsf, apkleaks |
+
+- [ ] **Language support matrix** — table of every supported language with tool names and coverage level (✓ full / ~ partial / planned):
+  | Language | SAST | SCA | Secrets | Quality |
+  |----------|------|-----|---------|---------|
+  | Go | ✓ | ✓ | ✓ | ✓ |
+  | Python | ✓ | ✓ | ✓ | ✓ |
+  | ... etc |
+
+- [ ] **Command reference summary** — all top-level commands in one table:
+  | Command | Description |
+  |---------|-------------|
+  | `armur run [target]` | Scan with interactive TUI (recommended) |
+  | `armur scan [target]` | Non-interactive scan |
+  | `armur explain <id>` | AI explanation of a finding |
+  | `armur fix <id>` | AI-generated code patch |
+  | `armur doctor` | Check prerequisites |
+  | `armur history` | Browse past scans |
+  | `armur report <format>` | Generate reports |
+  | `armur rules` | Manage detection rules |
+  | `armur setup <integration>` | Configure integrations |
+  | `armur serve` | Start local server |
+  | `armur mcp` | Start MCP server for AI editors |
+
+- [ ] **CI/CD integration snippets** — ready-to-paste code blocks for the 5 most common CI systems
+- [ ] **How it works** — 4-step architecture diagram (ASCII art or SVG): Code → Tools → Results → Report
+- [ ] **FAQ section** in the README (top 5 most-asked questions with short answers):
+  - "Does Armur send my code anywhere?" → No. Everything runs locally by default.
+  - "Do I need Docker?" → No. `armur run --in-process` works with zero infrastructure.
+  - "How is Armur different from Semgrep/Snyk?" → One tool that covers all categories; MCP integration; better TUI.
+  - "Can I use it in CI without a server?" → Yes. Use `armur scan --in-process`.
+  - "Is it free?" → Yes. MIT license. Armur Cloud has a free tier for open source.
+- [ ] **Contributing** and **License** sections at the bottom
+- [ ] Keep README under 500 lines — use "Read the docs" links for detail rather than embedding everything
+
+### 51.2 CLI Command Reference (In-Tool `--help` + Online Docs)
+
+Every command and flag must be self-documenting inside the tool itself, not just in external docs.
+
+- [ ] **Rich `--help` output for every command** — include:
+  - Short description (one line)
+  - Full description (2–3 sentences explaining when to use this command)
+  - At least 3 usage examples with real-world scenarios
+  - Flag descriptions that explain *why* you'd use the flag, not just what it does
+  - Link to online docs at the bottom: `Docs: https://docs.armur.ai/cli/<command>`
+
+  Example for `armur run`:
+  ```
+  armur run — Scan a target with the full interactive TUI experience
+
+  Opens a multi-step wizard to configure your scan, then shows a live progress
+  dashboard while tools run, and an interactive results browser when complete.
+  This is the recommended entry point for all new users.
+
+  Usage:
+    armur run [target] [flags]
+
+  Arguments:
+    target    File, directory, or git URL to scan.
+              Defaults to the current directory if omitted.
+
+  Examples:
+    armur run                          # scan current directory (auto-detects everything)
+    armur run ./my-project             # scan a specific directory
+    armur run https://github.com/org/repo  # scan a remote repository
+    armur run . --depth deep           # deep scan with all tools
+    armur run . --diff HEAD~1          # scan only files changed since last commit
+    armur run . --sca-only             # dependency vulnerabilities only
+    armur run . --fail-on-severity high  # exit 1 if any HIGH+ findings (for CI)
+
+  Flags:
+    -d, --depth string          Scan depth: quick (default) or deep
+    -l, --language string       Override auto-detected language
+        --diff string           Only scan files changed since this git ref
+        --sca-only              Run SCA (dependency) tools only
+        --dast-url string       Also run DAST scan against this URL
+        --fail-on-severity      Exit 1 if findings at or above this level
+        --min-severity string   Hide findings below this level in output
+        --output string         Output format: text (default), json, sarif
+        --save-report           Save report to ~/.armur/reports/
+        --in-process            Run without a server (no Docker/Redis needed)
+        --offline               Disable all external network calls
+        --watch                 Re-scan on file changes
+
+  Docs: https://docs.armur.ai/cli/run
+  ```
+
+- [ ] Apply the same rich `--help` treatment to all commands:
+  - [ ] `armur scan` — non-interactive version with all flags documented + examples
+  - [ ] `armur explain <id>` — with example output shown in --help
+  - [ ] `armur fix <id>` — document --apply, --pr, --verify flags with examples
+  - [ ] `armur doctor` — explain what each check does in --help
+  - [ ] `armur history` / `armur history show` / `armur history clear`
+  - [ ] `armur compare <id1> <id2>`
+  - [ ] `armur report html|csv|markdown|pdf|sarif|owasp|pci|cwe`
+  - [ ] `armur rules list|install|update|remove|create|test|validate`
+  - [ ] `armur setup <integration>`
+  - [ ] `armur serve` / `armur serve stop`
+  - [ ] `armur mcp` — explain MCP protocol and link to integration guides
+  - [ ] `armur config` — document every key with allowed values and defaults
+  - [ ] `armur init` — explain every generated .armur.yml field
+  - [ ] `armur sla report|stats`
+  - [ ] `armur debt`
+  - [ ] `armur scorecard`
+  - [ ] `armur sbom`
+  - [ ] `armur badge generate`
+  - [ ] `armur version --check`
+
+- [ ] **`armur help` interactive browser** — when `armur help` is run with no args, show a
+  Bubbletea-powered searchable list of all commands with descriptions; press Enter to expand
+  the full help for that command
+
+### 51.3 docs.armur.ai — The Documentation Site
+
+Full reference docs deployed at `docs.armur.ai`. Every page must be accurate, copyable, and searchable.
+
+- [ ] **Getting Started** (5-minute quickstart):
+  - [ ] Page 1: Installation (all methods: brew, npm, pip, curl, Docker, from source)
+  - [ ] Page 2: First scan — `cd my-project && armur run .` with annotated screenshot of TUI output
+  - [ ] Page 3: Understanding results — what each category means, what to fix first
+  - [ ] Page 4: Setting up CI — paste-ready GitHub Actions snippet
+  - [ ] Page 5: What's next — links to deeper topics
+
+- [ ] **CLI Reference** (auto-generated from cobra's command tree + hand-written examples):
+  - One page per top-level command
+  - Each page: description, usage syntax, all flags with types/defaults, 5+ examples, related commands
+  - Examples use real-world scenarios, not toy inputs
+  - Include expected output (truncated) for each example
+
+- [ ] **Configuration Reference** (`.armur.yml` full spec):
+  - Every field documented with: type, default, description, example value, which sprint introduced it
+  - Organized by section: `scan`, `tools`, `exclude`, `output`, `secrets`, `licenses`, `sla`, `never-allow`, `plugins`, `dast`, `ai`
+  - Full annotated example `.armur.yml` at the top of the page
+  - JSON Schema for `.armur.yml` published at `docs.armur.ai/schema/armur.json` (enables IDE autocompletion)
+
+- [ ] **Tool Reference** — one page per integrated tool (18 initial + all additions):
+  - Tool name, homepage, license, version requirement
+  - What it detects (with example findings)
+  - Which languages it supports
+  - How Armur invokes it (the exact command)
+  - How to install it manually (for non-Docker deployments)
+  - Known limitations and false positive patterns
+  - Link to the tool's own documentation
+
+- [ ] **Language Support Guide** — one page per supported language:
+  - Which tools run for this language in quick vs deep mode
+  - Which SCA ecosystems are supported
+  - Setup requirements (e.g. Java needs a JDK to compile before SpotBugs can run)
+  - Example `.armur.yml` for this language
+  - Sample findings from real projects in this language
+
+- [ ] **IaC & Container Reference** — per-platform pages for Terraform, CloudFormation, Kubernetes, Helm, Dockerfile, etc.
+
+- [ ] **Integrations** — per-integration pages:
+  - Claude Code (MCP), Cursor, Windsurf, Claude Desktop
+  - VS Code extension
+  - GitHub Actions, GitLab CI, CircleCI, Jenkins, Azure DevOps, Bitbucket
+  - Slack, Teams, Jira, Linear
+  - Pre-commit hook, Husky
+  - Armur Cloud
+
+- [ ] **API Reference** — rendered OpenAPI spec:
+  - Use Scalar (modern, beautiful) or Redoc for rendering
+  - Every endpoint documented with: description, request body, response schema, example cURL call, example response
+  - Include authentication section with example API key setup
+
+- [ ] **Architecture Guide** (for contributors and self-hosters):
+  - System diagram: CLI → API server → Asynq worker → tool executors → Redis → result store
+  - How a scan flows through the system end-to-end
+  - How the MCP server works
+  - How SSE streaming works
+  - Data model: Finding, ScanTask, ScanResult
+
+- [ ] **Deployment Guide**:
+  - Docker Compose (quickest — current method)
+  - Docker Compose in production (with reverse proxy, TLS, secrets management)
+  - Kubernetes deployment with Helm chart
+  - Air-gapped / offline deployment
+  - High-availability setup (multiple workers, Redis Sentinel)
+  - Environment variable reference (every `ARMUR_*` env var documented)
+
+- [ ] **Security Model** page — how Armur handles code security itself:
+  - What runs locally vs what goes to cloud
+  - How API keys are stored
+  - Network calls made during a scan (with `--offline` flag behavior)
+  - How to run in fully air-gapped mode
+  - Armur's own security posture (we dogfood our own scanner)
+
+### 51.4 Cookbook — Common Workflows as Recipes
+
+Short, copy-paste-ready guides for common real-world scenarios. Each recipe is one page.
+
+- [ ] **Recipe: Secure a Node.js API before launch** — quick scan + SCA + secrets + DAST
+- [ ] **Recipe: Add security to a Go microservice** — gosec + govulncheck + trivy in CI
+- [ ] **Recipe: Scan a monorepo with 5 services** — `armur run --monorepo` walkthrough
+- [ ] **Recipe: Block a PR with high security findings** — GitHub Actions gate setup
+- [ ] **Recipe: Find leaked secrets in git history** — `armur scan --history` walkthrough
+- [ ] **Recipe: Scan Terraform before `terraform apply`** — pre-apply security gate
+- [ ] **Recipe: Audit your Docker image before pushing** — `armur scan --image` workflow
+- [ ] **Recipe: Set up weekly security reports via Slack** — scheduled scan + Slack webhook
+- [ ] **Recipe: Use Armur in Claude Code for secure coding** — MCP setup walkthrough
+- [ ] **Recipe: Fix all CRITICAL findings with AI** — `armur fix --all --severity critical --apply`
+- [ ] **Recipe: Migrate from Snyk to Armur** — Snyk → Armur workflow mapping
+- [ ] **Recipe: Generate an SBOM for a compliance audit** — `armur sbom` + Dependency-Track
+- [ ] **Recipe: Set up SLA enforcement for your team** — SLA config + Slack breach notifications
+- [ ] **Recipe: Scan a smart contract before deployment** — Solidity + Slither + Mythril walkthrough
+
+### 51.5 Migration Guides
+
+Developers switching from other tools need a bridge. These guides show exactly how to map
+their existing workflow to Armur.
+
+- [ ] **Migrating from Semgrep**:
+  - Comparison table: Semgrep concepts → Armur equivalents
+  - How to import your existing Semgrep rules into Armur (`armur rules import --from semgrep`)
+  - Feature coverage comparison (what Armur adds that Semgrep doesn't: SCA, secrets, IaC, TUI)
+  - Side-by-side CLI comparison: `semgrep scan .` vs `armur run .`
+
+- [ ] **Migrating from Snyk**:
+  - Snyk vs Armur: what Snyk does that Armur covers, and vice versa
+  - Mapping Snyk severity levels to Armur severity levels
+  - How to reproduce Snyk's `snyk test` and `snyk code test` with Armur
+  - Cost comparison: Snyk Enterprise ($) vs Armur (free + Armur Cloud)
+
+- [ ] **Migrating from SonarQube**:
+  - Mapping SonarQube quality gates → Armur `fail-on-severity` and `never-allow`
+  - How to replicate SonarQube's language coverage with Armur
+  - Self-hosted comparison: SonarQube (JVM + Elasticsearch) vs Armur (Go + Redis — much simpler)
+
+- [ ] **Migrating from Trivy (standalone)**:
+  - Trivy is already integrated inside Armur — show how `armur run .` supersedes `trivy fs .`
+  - How Armur adds SAST + secrets + IaC on top of what Trivy provides
+
+- [ ] **Migrating from Checkov**:
+  - Checkov is already integrated inside Armur — show how `armur run .` supersedes `checkov -d .`
+  - What Armur adds: SAST, SCA for application code, secrets, TUI, reports
+
+### 51.6 Troubleshooting Guide
+
+- [ ] **Common error messages** — every error Armur can print, with cause and fix:
+  - "Connection refused: http://localhost:4500" → server not running, use --in-process
+  - "Tool not found: gosec" → install instructions per OS
+  - "Language detection failed" → how to specify --language manually
+  - "Redis connection failed" → Redis not running, use embedded mode
+  - "Scan timeout" → increase TOOL_TIMEOUT_SECONDS, or use --depth quick
+  - "Permission denied cloning repository" → SSH key or token setup instructions
+
+- [ ] **Performance troubleshooting**:
+  - Scan taking > 5 minutes → which tools are slow and why, how to skip them
+  - High memory usage → MAX_TOOL_CONCURRENCY tuning
+  - Disk space issues → temp directory cleanup instructions
+
+- [ ] **CI/CD troubleshooting**:
+  - Why GitHub Actions fails on rate limits (solution: cache tool installations)
+  - Why SARIF upload fails (common: file size limit, path issues)
+  - Why the scan works locally but fails in CI (environment differences)
+
+- [ ] **False positive management**:
+  - How to identify false positives vs genuine findings
+  - How to suppress with inline comments vs `.armur.yml` vs global suppression
+  - How to report a false positive to the Armur team
+
+### 51.7 CHANGELOG.md & Release Notes
+
+- [ ] Create `CHANGELOG.md` at repo root following [Keep a Changelog](https://keepachangelog.com) format:
+  ```markdown
+  # Changelog
+
+  All notable changes to Armur Code Scanner are documented here.
+  Format: Keep a Changelog (https://keepachangelog.com)
+  Versioning: Semantic Versioning (https://semver.org)
+
+  ## [Unreleased]
+  ### Added
+  - ...
+
+  ## [1.0.0] — 2026-XX-XX
+  ### Added
+  - Initial release with Go, Python, and JavaScript/TypeScript support
+  - 18 integrated security tools
+  - REST API + Asynq worker architecture
+  ...
+  ```
+- [ ] Automate CHANGELOG generation from conventional commits using `git-cliff` or `release-please`
+- [ ] Each GitHub Release includes:
+  - What's new (bullet points from CHANGELOG)
+  - Breaking changes (prominently highlighted)
+  - Migration steps for breaking changes
+  - SHA256 checksums for all binaries
+  - Docker image digest
+
+### 51.8 In-Code Documentation Standards
+
+These apply to all code written going forward, ensuring future contributors understand the codebase.
+
+- [ ] Every exported function in `internal/tools/` must have a godoc comment explaining:
+  - What the tool does
+  - What it returns
+  - What errors it can return
+  - Example: `// RunGosec runs the gosec static analyzer against the given directory and returns categorized security findings. Returns ErrToolNotFound if gosec is not installed.`
+- [ ] Every tool wrapper file must have a package-level comment with:
+  - Tool name and homepage URL
+  - Version requirement (minimum version tested)
+  - Installation instructions for the tool itself
+- [ ] `internal/models/finding.go` — every field of the `Finding` struct must have an inline comment
+- [ ] `internal/api/types.go` — every API request/response struct field must have a `json` tag + godoc comment (used for OpenAPI generation)
+- [ ] Run `golint ./...` and `godoc ./...` in CI to enforce comment coverage
+- [ ] Generate HTML godoc and publish to `pkg.go.dev/github.com/armur-ai/armur-codescanner`
+
+---
+
+*Last updated: March 2026*
+*Sprints 1–7: original roadmap. Sprints 8–15: CLI/TUI overhaul and core engine. Sprints 16–35: world-class scanner expansion. Sprints 36–45: distribution, adoption, and community flywheel. Sprints 46–50: enterprise hardening, privacy, DAST, mobile, and security governance. Sprint 51: documentation, README, and CLI reference — added March 2026.*
