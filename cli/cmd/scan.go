@@ -437,4 +437,7 @@ func init() {
 	scanCmd.Flags().BoolP("simple", "s", true, "Perform a simple scan")
 	scanCmd.Flags().BoolP("advanced", "a", false, "Perform an advanced scan")
 	scanCmd.Flags().StringP("output", "o", "text", "Output format (text, json)")
+	scanCmd.Flags().StringP("diff", "d", "", "Only scan files changed since this git ref (e.g. HEAD~1, main)")
+	scanCmd.Flags().Bool("fail-on-findings", false, "Exit with code 1 if any findings are reported")
+	scanCmd.Flags().StringP("min-severity", "S", "", "Minimum severity to display (info, low, medium, high, critical)")
 }

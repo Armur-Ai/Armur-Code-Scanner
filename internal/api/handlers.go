@@ -19,8 +19,10 @@ type ScanRequest struct {
 
 // LocalScanRequest represents a scan request for a local repository with a specified language
 type LocalScanRequest struct {
-	LocalPath string `json:"local_path" binding:"required" example:"/armur/repo"`
-	Language  string `json:"language" example:"go"`
+	LocalPath        string `json:"local_path" binding:"required" example:"/armur/repo"`
+	Language         string `json:"language" example:"go"`
+	DiffBaseRef      string `json:"diff_base_ref" example:"HEAD~1"`
+	ChangedFilesOnly bool   `json:"changed_files_only" example:"false"`
 }
 
 // ScanHandler godoc
