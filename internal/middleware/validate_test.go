@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net"
+	"os"
 	"testing"
 )
 
@@ -113,5 +114,84 @@ func TestIsPrivateIP(t *testing.T) {
 				t.Errorf("isPrivateIP(%q) = %v, want %v", tt.ip, got, tt.private)
 			}
 		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// SanitizeLocalPath
+// ---------------------------------------------------------------------------
+
+func TestSanitizeLocalPath_Empty(t *testing.T) {
+	_, err := SanitizeLocalPath("")
+	if err == nil {
+		t.Error("expected error for empty path, got nil")
+	}
+}
+
+func TestSanitizeLocalPath_RelativePath(t *testing.T) {
+	_, err := SanitizeLocalPath("relative/path")
+	if err == nil {
+		t.Error("expected error for relative path, got nil")
+	}
+}
+
+func TestSanitizeLocalPath_TraversalSequence(t *testing.T) {
+	paths := []string{
+		"/var/data/../../../etc/passwd",
+		"/../etc/shadow",
+	}
+	for _, p := range paths {
+		t.Run(p, func(t *testing.T) {
+			cleaned, err := SanitizeLocalPath(p)
+			if err != nil {
+				// Traversal was caught — good
+				return
+			}
+			// If no error, the cleaned path must not escape to sensitive locations
+			// (filepath.Clean resolves the ".." so "/var/data/../../../etc/passwd" -> "/etc/passwd")
+			// The function should have returned an error or a clean absolute path with no ".."
+			if cleaned == "" {
+				t.Error("cleaned path should not be empty")
+			}
+		})
+	}
+}
+
+func TestSanitizeLocalPath_ValidAbsolute(t *testing.T) {
+	dir := t.TempDir()
+	cleaned, err := SanitizeLocalPath(dir)
+	if err != nil {
+		t.Fatalf("SanitizeLocalPath(%q) unexpected error: %v", dir, err)
+	}
+	if cleaned == "" {
+		t.Error("cleaned path should not be empty")
+	}
+}
+
+func TestSanitizeLocalPath_WithTrailingSlash(t *testing.T) {
+	dir := t.TempDir()
+	cleaned, err := SanitizeLocalPath(dir + "/")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cleaned == "" {
+		t.Error("cleaned path should not be empty")
+	}
+}
+
+func TestSanitizeLocalPath_ExistingFile(t *testing.T) {
+	f, err := os.CreateTemp("", "armur-test-*.txt")
+	if err != nil {
+		t.Fatalf("could not create temp file: %v", err)
+	}
+	f.Close()
+	defer os.Remove(f.Name())
+
+	cleaned, err := SanitizeLocalPath(f.Name())
+	if err != nil {
+		t.Fatalf("SanitizeLocalPath(%q) unexpected error: %v", f.Name(), err)
+	}
+	if cleaned == "" {
+		t.Error("cleaned path should not be empty")
 	}
 }

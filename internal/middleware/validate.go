@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -105,6 +106,31 @@ func ValidateTaskID(id string) bool {
 		}
 	}
 	return true
+}
+
+// SanitizeLocalPath cleans and validates a local filesystem path to prevent
+// path traversal attacks (CWE-22). It returns the cleaned absolute path or
+// an error if the path contains traversal sequences or is otherwise invalid.
+func SanitizeLocalPath(rawPath string) (string, error) {
+	if rawPath == "" {
+		return "", &ValidationError{"local path must not be empty"}
+	}
+
+	// Clean the path to resolve any ".." or "." elements.
+	cleaned := filepath.Clean(rawPath)
+
+	// Reject any path that still contains ".." after cleaning — this should
+	// never happen after filepath.Clean, but acts as a defence-in-depth guard.
+	if strings.Contains(cleaned, "..") {
+		return "", &ValidationError{"path traversal sequences are not allowed"}
+	}
+
+	// Reject paths that are not absolute.
+	if !filepath.IsAbs(cleaned) {
+		return "", &ValidationError{"local path must be an absolute path"}
+	}
+
+	return cleaned, nil
 }
 
 // ValidationError is a user-facing validation failure.

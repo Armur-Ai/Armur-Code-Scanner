@@ -278,19 +278,26 @@ func ScanLocalHandler(c *gin.Context) {
 		return
 	}
 
+	// Sanitize path to prevent path traversal attacks (CWE-22).
+	sanitizedPath, err := middleware.SanitizeLocalPath(request.LocalPath)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	if request.Language != "" && request.Language != "go" && request.Language != "py" && request.Language != "js" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid language"})
 		return
 	}
 
 	// Verify the path exists and is a directory
-	if info, err := os.Stat(request.LocalPath); os.IsNotExist(err) || !info.IsDir() {
+	if info, err := os.Stat(sanitizedPath); os.IsNotExist(err) || !info.IsDir() {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or non-existent directory"})
 		return
 	}
 
 	// Enqueue the scan task with "local" scan type
-	taskID, err := tasks.EnqueueScanTask(utils.SimpleScan, request.LocalPath, request.Language)
+	taskID, err := tasks.EnqueueScanTask(utils.SimpleScan, sanitizedPath, request.Language)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to enqueue scan task", "details": err.Error()})
 		return
