@@ -4,7 +4,66 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
+
+// ---------------------------------------------------------------------------
+// maxConcurrency
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// toolTimeout
+// ---------------------------------------------------------------------------
+
+func TestToolTimeout_Default(t *testing.T) {
+	os.Unsetenv("TOOL_TIMEOUT_SECONDS")
+	if got := toolTimeout(); got != 300*time.Second {
+		t.Errorf("toolTimeout() = %v, want 300s", got)
+	}
+}
+
+func TestToolTimeout_EnvVar(t *testing.T) {
+	os.Setenv("TOOL_TIMEOUT_SECONDS", "60")
+	defer os.Unsetenv("TOOL_TIMEOUT_SECONDS")
+	if got := toolTimeout(); got != 60*time.Second {
+		t.Errorf("toolTimeout() = %v, want 60s", got)
+	}
+}
+
+func TestToolTimeout_InvalidEnvVar(t *testing.T) {
+	os.Setenv("TOOL_TIMEOUT_SECONDS", "bad")
+	defer os.Unsetenv("TOOL_TIMEOUT_SECONDS")
+	if got := toolTimeout(); got != 300*time.Second {
+		t.Errorf("toolTimeout() with invalid env = %v, want 300s", got)
+	}
+}
+
+func TestWithTimeout_CompletesBeforeDeadline(t *testing.T) {
+	os.Setenv("TOOL_TIMEOUT_SECONDS", "5")
+	defer os.Unsetenv("TOOL_TIMEOUT_SECONDS")
+
+	runner := withTimeout("fast-tool", func() toolResult {
+		return toolResult{name: "fast-tool", result: map[string]interface{}{"k": []interface{}{"v"}}}
+	})
+	res := runner()
+	if res.err != nil {
+		t.Errorf("expected no error, got: %v", res.err)
+	}
+}
+
+func TestWithTimeout_CancelledOnExpiry(t *testing.T) {
+	os.Setenv("TOOL_TIMEOUT_SECONDS", "1")
+	defer os.Unsetenv("TOOL_TIMEOUT_SECONDS")
+
+	runner := withTimeout("slow-tool", func() toolResult {
+		time.Sleep(3 * time.Second)
+		return toolResult{name: "slow-tool"}
+	})
+	res := runner()
+	if res.err == nil {
+		t.Error("expected timeout error, got nil")
+	}
+}
 
 // ---------------------------------------------------------------------------
 // maxConcurrency
