@@ -4,16 +4,136 @@ import (
 	"armur-codescanner/internal/logger"
 	tools "armur-codescanner/internal/tools"
 	utils "armur-codescanner/pkg"
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"sync"
+	"time"
 )
 
 // ScanError captures a tool-level failure that occurred during a scan.
 type ScanError struct {
 	Tool    string `json:"tool"`
 	Message string `json:"message"`
+}
+
+// toolResult holds the output of a single tool execution.
+type toolResult struct {
+	name   string
+	result map[string]interface{}
+	err    error
+}
+
+// maxConcurrency returns the configured tool concurrency limit.
+func maxConcurrency() int {
+	if v := os.Getenv("MAX_TOOL_CONCURRENCY"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	return 5
+}
+
+// toolTimeout returns the per-tool execution timeout.
+func toolTimeout() time.Duration {
+	if v := os.Getenv("TOOL_TIMEOUT_SECONDS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return time.Duration(n) * time.Second
+		}
+	}
+	return 300 * time.Second
+}
+
+// withTimeout wraps a tool runner so that it is cancelled after the configured
+// per-tool timeout. If the context expires the runner returns a ScanError.
+func withTimeout(name string, run func() toolResult) func() toolResult {
+	return func() toolResult {
+		ctx, cancel := context.WithTimeout(context.Background(), toolTimeout())
+		defer cancel()
+
+		ch := make(chan toolResult, 1)
+		go func() { ch <- run() }()
+
+		select {
+		case res := <-ch:
+			return res
+		case <-ctx.Done():
+			logger.Warn().Str("tool", name).Dur("timeout", toolTimeout()).Msg("tool timed out")
+			return toolResult{name: name, err: fmt.Errorf("tool %s timed out after %v", name, toolTimeout())}
+		}
+	}
+}
+
+// runParallel executes a set of named tool functions concurrently up to the
+// configured concurrency limit and returns aggregated results + per-tool errors.
+func runParallel(dirPath string, runners []func() toolResult) (map[string][]interface{}, []ScanError) {
+	sem := make(chan struct{}, maxConcurrency())
+	ch := make(chan toolResult, len(runners))
+	var wg sync.WaitGroup
+
+	for _, run := range runners {
+		wg.Add(1)
+		run := run
+		go func() {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			ch <- run()
+		}()
+	}
+
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+
+	categorized := utils.InitCategorizedResults()
+	var scanErrors []ScanError
+	for res := range ch {
+		if res.err != nil {
+			scanErrors = append(scanErrors, ScanError{Tool: res.name, Message: res.err.Error()})
+			continue
+		}
+		mergeResultss(categorized, res.result)
+	}
+	return categorized, scanErrors
+}
+
+// runParallelAdvanced is identical to runParallel but seeds with advanced categories.
+func runParallelAdvanced(dirPath string, runners []func() toolResult) (map[string][]interface{}, []ScanError) {
+	sem := make(chan struct{}, maxConcurrency())
+	ch := make(chan toolResult, len(runners))
+	var wg sync.WaitGroup
+
+	for _, run := range runners {
+		wg.Add(1)
+		run := run
+		go func() {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			ch <- run()
+		}()
+	}
+
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+
+	categorized := utils.InitAdvancedCategorizedResults()
+	var scanErrors []ScanError
+	for res := range ch {
+		if res.err != nil {
+			scanErrors = append(scanErrors, ScanError{Tool: res.name, Message: res.err.Error()})
+			continue
+		}
+		mergeResultss(categorized, res.result)
+	}
+	return categorized, scanErrors
 }
 
 func RunScanTask(repositoryURL, language string) map[string]interface{} {
@@ -134,227 +254,142 @@ func AdvancedScanRepositoryTask(repositoryURL, language string) map[string]inter
 	return categorizedResults
 }
 
-// RunSimpleScan runs the standard tool suite and returns results, any per-tool errors, and a fatal error if any.
+// RunSimpleScan runs the standard tool suite concurrently and returns results.
 func RunSimpleScan(dirPath string, language string) (map[string]interface{}, []ScanError, error) {
-	categorizedResults := utils.InitCategorizedResults()
-	var scanErrors []ScanError
-
-	semgrepResult, err := tools.RunSemgrep(dirPath, "--config=auto")
-	if err != nil {
-		scanErrors = append(scanErrors, ScanError{Tool: "semgrep", Message: err.Error()})
-	}
-	mergeResultss(categorizedResults, semgrepResult)
-
-	if language == "go" {
-		if r, err := tools.RunGosec(dirPath); err != nil {
-			scanErrors = append(scanErrors, ScanError{Tool: "gosec", Message: err.Error()})
-		} else {
-			mergeResultss(categorizedResults, r)
-		}
-
-		if r, err := tools.RunGolint(dirPath); err != nil {
-			scanErrors = append(scanErrors, ScanError{Tool: "golint", Message: err.Error()})
-		} else {
-			mergeResultss(categorizedResults, r)
-		}
-
-		if r, err := tools.RunGovet(dirPath); err != nil {
-			scanErrors = append(scanErrors, ScanError{Tool: "govet", Message: err.Error()})
-		} else {
-			mergeResultss(categorizedResults, r)
-		}
-
-		if r, err := tools.RunStaticCheck(dirPath); err != nil {
-			scanErrors = append(scanErrors, ScanError{Tool: "staticcheck", Message: err.Error()})
-		} else {
-			mergeResultss(categorizedResults, r)
-		}
-
-		if r, err := tools.RunGocyclo(dirPath); err != nil {
-			scanErrors = append(scanErrors, ScanError{Tool: "gocyclo", Message: err.Error()})
-		} else {
-			mergeResultss(categorizedResults, r)
-		}
-	} else if language == "py" {
-		if r, err := tools.RunBandit(dirPath); err != nil {
-			scanErrors = append(scanErrors, ScanError{Tool: "bandit", Message: err.Error()})
-		} else {
-			mergeResultss(categorizedResults, r)
-		}
-
-		if r, err := tools.RunPydocstyle(dirPath); err != nil {
-			scanErrors = append(scanErrors, ScanError{Tool: "pydocstyle", Message: err.Error()})
-		} else {
-			mergeResultss(categorizedResults, r)
-		}
-
-		if r, err := tools.RunRadon(dirPath); err != nil {
-			scanErrors = append(scanErrors, ScanError{Tool: "radon", Message: err.Error()})
-		} else {
-			mergeResultss(categorizedResults, r)
-		}
-
-		if r, err := tools.RunPylint(dirPath); err != nil {
-			scanErrors = append(scanErrors, ScanError{Tool: "pylint", Message: err.Error()})
-		} else {
-			mergeResultss(categorizedResults, r)
-		}
-	} else if language == "js" {
-		if r, err := tools.RunESLintOnRepo(dirPath); err != nil {
-			scanErrors = append(scanErrors, ScanError{Tool: "eslint", Message: err.Error()})
-		} else {
-			mergeResultss(categorizedResults, r)
-		}
-	}
+	runners := buildSimpleScanRunners(dirPath, language)
+	categorized, scanErrors := runParallel(dirPath, runners)
 
 	if err := os.RemoveAll(dirPath); err != nil {
 		return nil, scanErrors, fmt.Errorf("failed to remove directory: %v", err)
 	}
-	newCatResult := utils.ConvertCategorizedResults(categorizedResults)
-	finalresult := utils.ReformatScanResults(newCatResult)
-	return finalresult, scanErrors, nil
+	newCatResult := utils.ConvertCategorizedResults(categorized)
+	return utils.ReformatScanResults(newCatResult), scanErrors, nil
 }
 
-// RunSimpleScanLocal is the same as RunSimpleScan but does not delete the directory afterwards.
+// RunSimpleScanLocal is RunSimpleScan without directory cleanup (for local paths).
 func RunSimpleScanLocal(dirPath string, language string) (map[string]interface{}, []ScanError, error) {
-	categorizedResults := utils.InitCategorizedResults()
-	var scanErrors []ScanError
+	runners := buildSimpleScanRunners(dirPath, language)
+	categorized, scanErrors := runParallel(dirPath, runners)
 
-	semgrepResult, err := tools.RunSemgrep(dirPath, "--config=auto")
-	if err != nil {
-		scanErrors = append(scanErrors, ScanError{Tool: "semgrep", Message: err.Error()})
-	}
-	mergeResultss(categorizedResults, semgrepResult)
-
-	if language == "go" {
-		if r, err := tools.RunGosec(dirPath); err != nil {
-			scanErrors = append(scanErrors, ScanError{Tool: "gosec", Message: err.Error()})
-		} else {
-			mergeResultss(categorizedResults, r)
-		}
-
-		if r, err := tools.RunGolint(dirPath); err != nil {
-			scanErrors = append(scanErrors, ScanError{Tool: "golint", Message: err.Error()})
-		} else {
-			mergeResultss(categorizedResults, r)
-		}
-
-		if r, err := tools.RunGovet(dirPath); err != nil {
-			scanErrors = append(scanErrors, ScanError{Tool: "govet", Message: err.Error()})
-		} else {
-			mergeResultss(categorizedResults, r)
-		}
-
-		if r, err := tools.RunStaticCheck(dirPath); err != nil {
-			scanErrors = append(scanErrors, ScanError{Tool: "staticcheck", Message: err.Error()})
-		} else {
-			mergeResultss(categorizedResults, r)
-		}
-
-		if r, err := tools.RunGocyclo(dirPath); err != nil {
-			scanErrors = append(scanErrors, ScanError{Tool: "gocyclo", Message: err.Error()})
-		} else {
-			mergeResultss(categorizedResults, r)
-		}
-	} else if language == "py" {
-		if r, err := tools.RunBandit(dirPath); err != nil {
-			scanErrors = append(scanErrors, ScanError{Tool: "bandit", Message: err.Error()})
-		} else {
-			mergeResultss(categorizedResults, r)
-		}
-
-		if r, err := tools.RunPydocstyle(dirPath); err != nil {
-			scanErrors = append(scanErrors, ScanError{Tool: "pydocstyle", Message: err.Error()})
-		} else {
-			mergeResultss(categorizedResults, r)
-		}
-
-		if r, err := tools.RunRadon(dirPath); err != nil {
-			scanErrors = append(scanErrors, ScanError{Tool: "radon", Message: err.Error()})
-		} else {
-			mergeResultss(categorizedResults, r)
-		}
-
-		if r, err := tools.RunPylint(dirPath); err != nil {
-			scanErrors = append(scanErrors, ScanError{Tool: "pylint", Message: err.Error()})
-		} else {
-			mergeResultss(categorizedResults, r)
-		}
-	} else if language == "js" {
-		if r, err := tools.RunESLintOnRepo(dirPath); err != nil {
-			scanErrors = append(scanErrors, ScanError{Tool: "eslint", Message: err.Error()})
-		} else {
-			mergeResultss(categorizedResults, r)
-		}
-	}
-
-	newCatResult := utils.ConvertCategorizedResults(categorizedResults)
-	finalresult := utils.ReformatScanResults(newCatResult)
-	return finalresult, scanErrors, nil
+	newCatResult := utils.ConvertCategorizedResults(categorized)
+	return utils.ReformatScanResults(newCatResult), scanErrors, nil
 }
 
-// RunAdvancedScans runs the full advanced tool suite.
+// buildSimpleScanRunners returns the set of tool runners for a standard scan.
+// Each runner is wrapped with a per-tool timeout.
+func buildSimpleScanRunners(dirPath, language string) []func() toolResult {
+	runners := []func() toolResult{
+		withTimeout("semgrep", func() toolResult {
+			r, err := tools.RunSemgrep(dirPath, "--config=auto")
+			return toolResult{"semgrep", r, err}
+		}),
+	}
+
+	switch language {
+	case "go":
+		runners = append(runners,
+			withTimeout("gosec", func() toolResult {
+				r, err := tools.RunGosec(dirPath)
+				return toolResult{"gosec", r, err}
+			}),
+			withTimeout("golint", func() toolResult {
+				r, err := tools.RunGolint(dirPath)
+				return toolResult{"golint", r, err}
+			}),
+			withTimeout("govet", func() toolResult {
+				r, err := tools.RunGovet(dirPath)
+				return toolResult{"govet", r, err}
+			}),
+			withTimeout("staticcheck", func() toolResult {
+				r, err := tools.RunStaticCheck(dirPath)
+				return toolResult{"staticcheck", r, err}
+			}),
+			withTimeout("gocyclo", func() toolResult {
+				r, err := tools.RunGocyclo(dirPath)
+				return toolResult{"gocyclo", r, err}
+			}),
+		)
+	case "py":
+		runners = append(runners,
+			withTimeout("bandit", func() toolResult {
+				r, err := tools.RunBandit(dirPath)
+				return toolResult{"bandit", r, err}
+			}),
+			withTimeout("pydocstyle", func() toolResult {
+				r, err := tools.RunPydocstyle(dirPath)
+				return toolResult{"pydocstyle", r, err}
+			}),
+			withTimeout("radon", func() toolResult {
+				r, err := tools.RunRadon(dirPath)
+				return toolResult{"radon", r, err}
+			}),
+			withTimeout("pylint", func() toolResult {
+				r, err := tools.RunPylint(dirPath)
+				return toolResult{"pylint", r, err}
+			}),
+		)
+	case "js":
+		runners = append(runners,
+			withTimeout("eslint", func() toolResult {
+				r, err := tools.RunESLintOnRepo(dirPath)
+				return toolResult{"eslint", r, err}
+			}),
+		)
+	}
+
+	return runners
+}
+
+// RunAdvancedScans runs the full advanced tool suite concurrently.
 func RunAdvancedScans(dirPath string, language string) (map[string]interface{}, []ScanError, error) {
-	categorizedResults := utils.InitAdvancedCategorizedResults()
-	var scanErrors []ScanError
-
-	if r, err := tools.RunJSCPD(dirPath); err != nil {
-		scanErrors = append(scanErrors, ScanError{Tool: "jscpd", Message: err.Error()})
-	} else {
-		mergeResultss(categorizedResults, r)
+	runners := []func() toolResult{
+		withTimeout("jscpd", func() toolResult {
+			r, err := tools.RunJSCPD(dirPath)
+			return toolResult{"jscpd", r, err}
+		}),
+		withTimeout("checkov", func() toolResult {
+			r, err := tools.RunCheckov(dirPath)
+			return toolResult{"checkov", r, err}
+		}),
+		withTimeout("trufflehog", func() toolResult {
+			r, err := tools.RunTrufflehog(dirPath)
+			return toolResult{"trufflehog", r, err}
+		}),
+		withTimeout("trivy", func() toolResult {
+			r, err := tools.RunTrivy(dirPath)
+			return toolResult{"trivy", r, err}
+		}),
+		withTimeout("osv-scanner", func() toolResult {
+			r, err := tools.RunOSVScanner(dirPath)
+			return toolResult{"osv-scanner", r, err}
+		}),
 	}
 
-	if r, err := tools.RunCheckov(dirPath); err != nil {
-		scanErrors = append(scanErrors, ScanError{Tool: "checkov", Message: err.Error()})
-	} else {
-		mergeResultss(categorizedResults, r)
+	switch language {
+	case "go":
+		runners = append(runners, withTimeout("deadcode", func() toolResult {
+			r, err := tools.RunGoDeadcode(dirPath)
+			return toolResult{"deadcode", r, err}
+		}))
+	case "py":
+		runners = append(runners, withTimeout("vulture", func() toolResult {
+			r, err := tools.RunVulture(dirPath)
+			return toolResult{"vulture", r, err}
+		}))
+	case "js":
+		runners = append(runners, withTimeout("eslint-advanced", func() toolResult {
+			r, err := tools.RunESLintAdvanced(dirPath)
+			return toolResult{"eslint-advanced", r, err}
+		}))
 	}
 
-	if r, err := tools.RunTrufflehog(dirPath); err != nil {
-		scanErrors = append(scanErrors, ScanError{Tool: "trufflehog", Message: err.Error()})
-	} else {
-		mergeResultss(categorizedResults, r)
-	}
-
-	if r, err := tools.RunTrivy(dirPath); err != nil {
-		scanErrors = append(scanErrors, ScanError{Tool: "trivy", Message: err.Error()})
-	} else {
-		mergeResultss(categorizedResults, r)
-	}
-
-	if r, err := tools.RunOSVScanner(dirPath); err != nil {
-		logger.Warn().Str("tool", "osv-scanner").Err(err).Msg("tool failed")
-		scanErrors = append(scanErrors, ScanError{Tool: "osv-scanner", Message: err.Error()})
-	} else {
-		mergeResultss(categorizedResults, r)
-	}
-
-	if language == "go" {
-		if r, err := tools.RunGoDeadcode(dirPath); err != nil {
-			scanErrors = append(scanErrors, ScanError{Tool: "deadcode", Message: err.Error()})
-		} else {
-			mergeResultss(categorizedResults, r)
-		}
-	} else if language == "py" {
-		if r, err := tools.RunVulture(dirPath); err != nil {
-			scanErrors = append(scanErrors, ScanError{Tool: "vulture", Message: err.Error()})
-		} else {
-			mergeResultss(categorizedResults, r)
-		}
-	} else if language == "js" {
-		if r, err := tools.RunESLintAdvanced(dirPath); err != nil {
-			scanErrors = append(scanErrors, ScanError{Tool: "eslint-advanced", Message: err.Error()})
-		} else {
-			mergeResultss(categorizedResults, r)
-		}
-	}
+	categorized, scanErrors := runParallelAdvanced(dirPath, runners)
 
 	if err := os.RemoveAll(dirPath); err != nil {
 		return nil, scanErrors, fmt.Errorf("failed to remove directory: %v", err)
 	}
-	newCatResult := utils.ConvertCategorizedResults(categorizedResults)
-	finalresult := utils.ReformatAdvancedScanResults(newCatResult)
-	return finalresult, scanErrors, nil
+	newCatResult := utils.ConvertCategorizedResults(categorized)
+	return utils.ReformatAdvancedScanResults(newCatResult), scanErrors, nil
 }
 
 func mergeResultss(categorizedResults map[string][]interface{}, newResults map[string]interface{}) {
