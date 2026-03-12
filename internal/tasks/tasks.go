@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"armur-codescanner/internal/config"
 	"armur-codescanner/internal/logger"
 	tools "armur-codescanner/internal/tools"
 	utils "armur-codescanner/pkg"
@@ -254,9 +255,52 @@ func AdvancedScanRepositoryTask(repositoryURL, language string) map[string]inter
 	return categorizedResults
 }
 
+// applyProjectConfig filters a set of named runners according to the project
+// config's tool allow/block lists, then appends any configured plugins.
+func applyProjectConfig(
+	dirPath string,
+	language string,
+	runners []func() toolResult,
+	namedRunners []string, // parallel slice of tool names (same order as runners)
+	cfg *config.ArmurConfig,
+) []func() toolResult {
+	if cfg == nil {
+		return runners
+	}
+
+	// Filter by IsToolEnabled.
+	var filtered []func() toolResult
+	for i, run := range runners {
+		name := ""
+		if i < len(namedRunners) {
+			name = namedRunners[i]
+		}
+		if name == "" || cfg.IsToolEnabled(name) {
+			filtered = append(filtered, run)
+		}
+	}
+
+	// Append plugin runners for applicable plugins.
+	for _, plugin := range cfg.Plugins {
+		plugin := plugin // capture loop var
+		if plugin.Language != "" && plugin.Language != language {
+			continue
+		}
+		filtered = append(filtered, withTimeout(plugin.Name, func() toolResult {
+			result, err := plugin.RunPlugin(dirPath)
+			return toolResult{name: plugin.Name, result: result, err: err}
+		}))
+	}
+
+	return filtered
+}
+
 // RunSimpleScan runs the standard tool suite concurrently and returns results.
 func RunSimpleScan(dirPath string, language string) (map[string]interface{}, []ScanError, error) {
-	runners := buildSimpleScanRunners(dirPath, language)
+	runners, names := buildSimpleScanRunnersNamed(dirPath, language)
+	if cfg, err := config.LoadProjectConfig(dirPath); err == nil {
+		runners = applyProjectConfig(dirPath, language, runners, names, cfg)
+	}
 	categorized, scanErrors := runParallel(dirPath, runners)
 
 	if err := os.RemoveAll(dirPath); err != nil {
@@ -268,7 +312,10 @@ func RunSimpleScan(dirPath string, language string) (map[string]interface{}, []S
 
 // RunSimpleScanLocal is RunSimpleScan without directory cleanup (for local paths).
 func RunSimpleScanLocal(dirPath string, language string) (map[string]interface{}, []ScanError, error) {
-	runners := buildSimpleScanRunners(dirPath, language)
+	runners, names := buildSimpleScanRunnersNamed(dirPath, language)
+	if cfg, err := config.LoadProjectConfig(dirPath); err == nil {
+		runners = applyProjectConfig(dirPath, language, runners, names, cfg)
+	}
 	categorized, scanErrors := runParallel(dirPath, runners)
 
 	newCatResult := utils.ConvertCategorizedResults(categorized)
@@ -278,12 +325,20 @@ func RunSimpleScanLocal(dirPath string, language string) (map[string]interface{}
 // buildSimpleScanRunners returns the set of tool runners for a standard scan.
 // Each runner is wrapped with a per-tool timeout.
 func buildSimpleScanRunners(dirPath, language string) []func() toolResult {
+	runners, _ := buildSimpleScanRunnersNamed(dirPath, language)
+	return runners
+}
+
+// buildSimpleScanRunnersNamed is like buildSimpleScanRunners but also returns the
+// tool name for each runner (parallel slices) so callers can apply config filtering.
+func buildSimpleScanRunnersNamed(dirPath, language string) ([]func() toolResult, []string) {
 	runners := []func() toolResult{
 		withTimeout("semgrep", func() toolResult {
 			r, err := tools.RunSemgrep(dirPath, "--config=auto")
 			return toolResult{"semgrep", r, err}
 		}),
 	}
+	names := []string{"semgrep"}
 
 	switch language {
 	case "go":
@@ -309,6 +364,7 @@ func buildSimpleScanRunners(dirPath, language string) []func() toolResult {
 				return toolResult{"gocyclo", r, err}
 			}),
 		)
+		names = append(names, "gosec", "golint", "govet", "staticcheck", "gocyclo")
 	case "py":
 		runners = append(runners,
 			withTimeout("bandit", func() toolResult {
@@ -328,6 +384,7 @@ func buildSimpleScanRunners(dirPath, language string) []func() toolResult {
 				return toolResult{"pylint", r, err}
 			}),
 		)
+		names = append(names, "bandit", "pydocstyle", "radon", "pylint")
 	case "js":
 		runners = append(runners,
 			withTimeout("eslint", func() toolResult {
@@ -335,9 +392,10 @@ func buildSimpleScanRunners(dirPath, language string) []func() toolResult {
 				return toolResult{"eslint", r, err}
 			}),
 		)
+		names = append(names, "eslint")
 	}
 
-	return runners
+	return runners, names
 }
 
 // RunAdvancedScans runs the full advanced tool suite concurrently.
