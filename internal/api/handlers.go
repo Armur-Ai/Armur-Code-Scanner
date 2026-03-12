@@ -11,6 +11,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// reposBaseDir returns the base directory for temporary scan files.
+// Reads ARMUR_REPOS_DIR env var; falls back to /armur/repos.
+func reposBaseDir() string {
+	if d := os.Getenv("ARMUR_REPOS_DIR"); d != "" {
+		return d
+	}
+	return "/armur/repos"
+}
+
 // ScanRequest represents a scan request for a github repository with a specified language
 type ScanRequest struct {
 	RepositoryURL string `json:"repository_url" example:"https://github.com/Armur-Ai/Armur-Code-Scanner"`
@@ -120,12 +129,10 @@ func ScanFile(c *gin.Context) {
 		return
 	}
 
-	baseDir := "/armur/repos"
-	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(baseDir, os.ModePerm); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create base directory", "details": err.Error()})
-			return
-		}
+	baseDir := reposBaseDir()
+	if err := os.MkdirAll(baseDir, os.ModePerm); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create base directory", "details": err.Error()})
+		return
 	}
 
 	tempDir, err := os.MkdirTemp(baseDir, "scan")
