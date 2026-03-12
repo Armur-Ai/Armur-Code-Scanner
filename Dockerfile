@@ -1,100 +1,137 @@
-# Use a base image with Python
-FROM python:3.10-slim
+# ============================================================
+# Stage 1: Go binary builder
+# ============================================================
+FROM golang:1.23-alpine AS go-builder
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+WORKDIR /build
+RUN apk add --no-cache git
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o /armur-server ./cmd/server/main.go
 
-# Set the working directory
-WORKDIR /armur
+# ============================================================
+# Stage 2: Go security tools
+# ============================================================
+FROM golang:1.23-alpine AS go-tools
 
-# Install required dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends git curl build-essential gcc && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN apk add --no-cache git
+ENV GOBIN=/go-tools
+RUN mkdir -p /go-tools
 
-# Install Go (use the amd64 version for x86-64 architecture)
-RUN curl -OL https://go.dev/dl/go1.23.1.linux-amd64.tar.gz && \
-    tar -C /usr/local -xvf go1.23.1.linux-amd64.tar.gz && \
-    rm go1.23.1.linux-amd64.tar.gz
+RUN go install github.com/securego/gosec/v2/cmd/gosec@v2.20.0 && \
+    go install golang.org/x/lint/golint@latest && \
+    go install honnef.co/go/tools/cmd/staticcheck@latest && \
+    go install github.com/fzipp/gocyclo/cmd/gocyclo@latest && \
+    go install golang.org/x/tools/cmd/deadcode@latest && \
+    go install github.com/google/osv-scanner/cmd/osv-scanner@latest
 
-# Add Go to PATH
-ENV PATH="/usr/local/go/bin:/root/go/bin:${PATH}"
+# ============================================================
+# Stage 3: Python security tools
+# ============================================================
+FROM python:3.12-slim AS python-tools
 
-# Install gosec
-RUN go install github.com/securego/gosec/v2/cmd/gosec@v2.20.0
+RUN pip install --no-cache-dir \
+    semgrep bandit pydocstyle radon pylint trufflehog3 checkov vulture
 
-# Install golint
-RUN go install golang.org/x/lint/golint@latest
+# ============================================================
+# Runtime target: armur:go  (Go tools only)
+# docker build --target armur-go -t armur:go .
+# ============================================================
+FROM debian:bookworm-slim AS armur-go
 
-# Install staticcheck
-RUN go install honnef.co/go/tools/cmd/staticcheck@latest
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git ca-certificates && rm -rf /var/lib/apt/lists/*
 
-# Install gocyclo
-RUN go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
-
-# Install deadcode
-RUN go install golang.org/x/tools/cmd/deadcode@latest
-
-# Install osv-scanner
-RUN go install github.com/google/osv-scanner/cmd/osv-scanner@latest
-
-# Install Trivy
-RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.55.2
-
-# Install Node.js and npm using NodeSource
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
-    apt-get install -y nodejs && \
-    npm install -g npm@latest
-
-# Copy the current directory contents into the container at /app
+COPY --from=go-builder /armur-server  /usr/local/bin/armur-server
+COPY --from=go-tools   /go-tools      /usr/local/bin/
 COPY . /armur
+WORKDIR /armur
+ENV ARMUR_REPOS_DIR=/armur/repos
+RUN mkdir -p /armur/repos
+EXPOSE 4500
+CMD ["/usr/local/bin/armur-server"]
 
-# Install global npm packages
-RUN npm install -g eslint
+# ============================================================
+# Runtime target: armur:python  (Python tools only)
+# docker build --target armur-py -t armur:python .
+# ============================================================
+FROM python:3.12-slim AS armur-py
 
-# Install jscpd
-RUN npm install -g jscpd
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git ca-certificates && rm -rf /var/lib/apt/lists/*
 
-# Install project-specific npm packages locally
+COPY --from=go-builder   /armur-server /usr/local/bin/armur-server
+COPY --from=python-tools /usr/local    /usr/local
+COPY . /armur
+WORKDIR /armur
+ENV ARMUR_REPOS_DIR=/armur/repos
+RUN mkdir -p /armur/repos
+EXPOSE 4500
+CMD ["/usr/local/bin/armur-server"]
+
+# ============================================================
+# Runtime target: armur:js  (JavaScript/TypeScript tools only)
+# docker build --target armur-js -t armur:js .
+# ============================================================
+FROM node:22-slim AS armur-js
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git ca-certificates && rm -rf /var/lib/apt/lists/*
+
+COPY --from=go-builder /armur-server /usr/local/bin/armur-server
+RUN npm install -g eslint jscpd
+COPY . /armur
+WORKDIR /armur
+RUN npm install @eslint/js eslint-plugin-jsdoc eslint-plugin-security
+COPY rule_config/eslint/eslint.config.js           /armur/eslint.config.js
+COPY rule_config/eslint/eslint_jsdoc.config.js     /armur/eslint_jsdoc.config.js
+COPY rule_config/eslint/eslint_security.config.js  /armur/eslint_security.config.js
+COPY rule_config/eslint/eslint_deadcode.config.js  /armur/eslint_deadcode.config.js
+ENV ARMUR_REPOS_DIR=/armur/repos
+RUN mkdir -p /armur/repos
+EXPOSE 4500
+CMD ["/usr/local/bin/armur-server"]
+
+# ============================================================
+# Runtime target: armur:full  (all tools — DEFAULT)
+# docker build -t armur:full .
+# ============================================================
+FROM python:3.12-slim AS armur-full
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git ca-certificates curl build-essential gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Node.js
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Go binary + Go tools
+COPY --from=go-builder /armur-server /usr/local/bin/armur-server
+COPY --from=go-tools   /go-tools     /usr/local/bin/
+
+# Python tools
+COPY --from=python-tools /usr/local /usr/local
+
+# Trivy
+RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+    | sh -s -- -b /usr/local/bin v0.55.2
+
+# Node tools
+RUN npm install -g eslint jscpd
+
+COPY . /armur
+WORKDIR /armur
 RUN npm install @eslint/js eslint-plugin-jsdoc eslint-plugin-security
 
-# Install Python dependencies
-# RUN pip install --no-cache-dir -r requirements.txt
+COPY rule_config/eslint/eslint.config.js           /armur/eslint.config.js
+COPY rule_config/eslint/eslint_jsdoc.config.js     /armur/eslint_jsdoc.config.js
+COPY rule_config/eslint/eslint_security.config.js  /armur/eslint_security.config.js
+COPY rule_config/eslint/eslint_deadcode.config.js  /armur/eslint_deadcode.config.js
 
-# Install Semgrep
-RUN pip install semgrep
-
-# Install Bandit
-RUN pip install bandit
-
-# Install pydocstyle
-RUN pip install pydocstyle
-
-# Install radon
-RUN pip install radon
-
-# Install pylint
-RUN pip install pylint
-
-# Install truffleHog
-RUN pip install trufflehog3
-
-# Install checkov
-RUN pip install checkov
-
-# Install vulture
-RUN pip install vulture
-
-# Copy the ESLint configuration files
-COPY /rule_config/eslint/eslint.config.js /armur/eslint.config.js
-COPY /rule_config/eslint/eslint_jsdoc.config.js /armur/eslint_jsdoc.config.js
-COPY /rule_config/eslint/eslint_security.config.js /armur/eslint_security.config.js
-COPY /rule_config/eslint/eslint_deadcode.config.js /armur/eslint_deadcode.config.js
-
-# Expose the port that the app runs on
+ENV ARMUR_REPOS_DIR=/armur/repos
+RUN mkdir -p /armur/repos
 EXPOSE 4500
-
-# Run the application
-CMD ["go", "run", "./cmd/server/main.go"]
+CMD ["/usr/local/bin/armur-server"]
