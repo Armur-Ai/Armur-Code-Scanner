@@ -128,29 +128,29 @@ ordered by priority within each sprint.
 ## Sprint 3 — Integrations & Adoption
 
 ### 3.1 SARIF Output Format
-- [ ] Implement SARIF 2.1.0 output format for scan results
-- [ ] Add `--format sarif` flag to `armur scan` CLI command
-- [ ] Add `format=sarif` query param to API status endpoint
-- [ ] Map all existing CWE/finding data to SARIF `result`, `rule`, `location` objects
+- [x] Implement SARIF 2.1.0 output format for scan results
+- [x] Add `--format sarif` flag to `armur scan` CLI command
+- [x] Add `format=sarif` query param to API status endpoint
+- [x] Map all existing CWE/finding data to SARIF `result`, `rule`, `location` objects
 - [ ] Validate output against SARIF schema
 - [ ] Add SARIF output example to README
 - [ ] Document GitHub Code Scanning upload workflow
 
 ### 3.2 GitHub Actions Integration
-- [ ] Create `armur-ai/armur-scan-action` GitHub Action repository
-- [ ] Implement action with inputs:
-  - [ ] `target` — path to scan (default: `.`)
-  - [ ] `fail-on-severity` — minimum severity to fail the workflow
-  - [ ] `output-format` — `sarif`, `json`, or `table`
-  - [ ] `languages` — comma-separated language filter
-- [ ] Upload SARIF to GitHub Code Scanning via `github/codeql-action/upload-sarif`
+- [x] Create `armur-ai/armur-scan-action` GitHub Action repository
+- [x] Implement action with inputs:
+  - [x] `target` — path to scan (default: `.`)
+  - [x] `fail-on-severity` — minimum severity to fail the workflow
+  - [x] `output-format` — `sarif`, `json`, or `table`
+  - [x] `languages` — comma-separated language filter
+- [x] Upload SARIF to GitHub Code Scanning via `github/codeql-action/upload-sarif`
 - [ ] Add PR comment with finding summary using GitHub API
 - [ ] Publish to GitHub Actions Marketplace
 - [ ] Add usage example to main README
 
 ### 3.3 Pre-commit Hook Support
-- [ ] Create `.pre-commit-hooks.yaml` in repo root
-- [ ] Implement fast pre-commit scan (staged files only, skip slow tools)
+- [x] Create `.pre-commit-hooks.yaml` in repo root
+- [x] Implement fast pre-commit scan (staged files only, skip slow tools)
 - [ ] Document setup in README:
   ```yaml
   repos:
@@ -158,20 +158,20 @@ ordered by priority within each sprint.
       hooks:
         - id: armur-scan
   ```
-- [ ] Add `--staged-only` flag to CLI for pre-commit use case
+- [x] Add `--staged-only` flag to CLI for pre-commit use case
 
 ### 3.4 Webhook Notifications
-- [ ] Add `webhook_url` field to scan request payload
-- [ ] POST scan results to webhook URL on task completion
-- [ ] Include HMAC signature header for webhook verification
-- [ ] Add retry logic for failed webhook deliveries (3 retries, exponential backoff)
+- [x] Add `webhook_url` field to scan request payload
+- [x] POST scan results to webhook URL on task completion
+- [x] Include HMAC signature header for webhook verification
+- [x] Add retry logic for failed webhook deliveries (3 retries, exponential backoff)
 - [ ] Document webhook payload schema
 
 ### 3.5 GitLab CI Integration
-- [ ] Create GitLab CI template (`.gitlab-ci.yml` snippet)
-- [ ] Map SARIF output to GitLab SAST report format
-- [ ] Document GitLab Security Dashboard integration
-- [ ] Add GitLab template to docs
+- [x] Create GitLab CI template (`.gitlab-ci.yml` snippet)
+- [x] Map SARIF output to GitLab SAST report format
+- [x] Document GitLab Security Dashboard integration
+- [x] Add GitLab template to docs
 
 ---
 
