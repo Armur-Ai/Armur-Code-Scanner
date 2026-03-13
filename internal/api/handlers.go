@@ -26,6 +26,8 @@ func reposBaseDir() string {
 type ScanRequest struct {
 	RepositoryURL string `json:"repository_url" example:"https://github.com/Armur-Ai/Armur-Code-Scanner"`
 	Language      string `json:"language" example:"go"`
+	WebhookURL    string `json:"webhook_url,omitempty" example:"https://hooks.example.com/armur"`
+	WebhookSecret string `json:"webhook_secret,omitempty" example:"my-hmac-secret"`
 }
 
 // LocalScanRequest represents a scan request for a local repository with a specified language
@@ -66,7 +68,8 @@ func ScanHandler(c *gin.Context) {
 	}
 
 	// Enqueue the scan task
-	taskID, err := tasks.EnqueueScanTask(utils.SimpleScan, request.RepositoryURL, request.Language)
+	taskID, err := tasks.EnqueueScanTask(utils.SimpleScan, request.RepositoryURL, request.Language,
+		tasks.ScanOptions{WebhookURL: request.WebhookURL, WebhookSecret: request.WebhookSecret})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to enqueue scan task", "details": err.Error()})
 		return
@@ -104,7 +107,8 @@ func AdvancedScanResult(c *gin.Context) {
 		return
 	}
 
-	taskID, err := tasks.EnqueueScanTask(utils.AdvancedScan, request.RepositoryURL, request.Language)
+	taskID, err := tasks.EnqueueScanTask(utils.AdvancedScan, request.RepositoryURL, request.Language,
+		tasks.ScanOptions{WebhookURL: request.WebhookURL, WebhookSecret: request.WebhookSecret})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to enqueue scan task", "details": err.Error()})
 		return
