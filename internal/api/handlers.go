@@ -4,9 +4,11 @@ import (
 	"armur-codescanner/internal/middleware"
 	"armur-codescanner/internal/tasks"
 	utils "armur-codescanner/pkg"
+	"armur-codescanner/pkg/sarif"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -161,9 +163,13 @@ func ScanFile(c *gin.Context) {
 // TaskStatus godoc
 // @Summary Get task status and results.
 // @Description Get the status and results of a scan task by its ID.
+//
+//	Supports ?format=sarif to return SARIF 2.1.0 output.
+//
 // @Tags scan
 // @Produce json
 // @Param task_id path string true "Task ID"
+// @Param format query string false "Output format (json, sarif)" Enums(json, sarif)
 // @Success 200 {object} map[string]interface{} "Successfully retrieved task result"
 // @Router /api/v1/status/{task_id} [get]
 func TaskStatus(c *gin.Context) {
@@ -179,6 +185,19 @@ func TaskStatus(c *gin.Context) {
 			"status":  "pending",
 			"task_id": taskID,
 		})
+		return
+	}
+
+	// Support SARIF output format via ?format=sarif query param.
+	if strings.EqualFold(c.Query("format"), "sarif") {
+		scanMap, _ := result.(map[string]interface{})
+		sarifLog := sarif.FromScanResults(scanMap, "")
+		data, marshalErr := sarifLog.Marshal()
+		if marshalErr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to marshal SARIF output"})
+			return
+		}
+		c.Data(http.StatusOK, "application/json", data)
 		return
 	}
 
