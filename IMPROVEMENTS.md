@@ -66,22 +66,22 @@ ordered by priority within each sprint.
 ## Sprint 2 — Performance & Architecture
 
 ### 2.1 Parallel Tool Execution
-- [ ] Refactor `RunSimpleScan()` to execute tools concurrently using goroutines + `sync.WaitGroup`
-- [ ] Refactor `RunAdvancedScans()` similarly
-- [ ] Use a result channel to collect tool outputs safely
-- [ ] Add a configurable concurrency limit (env var: `MAX_TOOL_CONCURRENCY`, default: 5)
-- [ ] Add per-tool timeout (env var: `TOOL_TIMEOUT_SECONDS`, default: 300)
+- [x] Refactor `RunSimpleScan()` to execute tools concurrently using goroutines + `sync.WaitGroup`
+- [x] Refactor `RunAdvancedScans()` similarly
+- [x] Use a result channel to collect tool outputs safely
+- [x] Add a configurable concurrency limit (env var: `MAX_TOOL_CONCURRENCY`, default: 5)
+- [x] Add per-tool timeout (env var: `TOOL_TIMEOUT_SECONDS`, default: 300)
 - [ ] Benchmark before/after to document speedup
 
 ### 2.2 Diff / Incremental Scanning
-- [ ] Add `--diff <base-ref>` flag to `armur scan` (e.g., `--diff HEAD~1`, `--diff main`)
-- [ ] Implement git diff logic to extract list of changed files
-- [ ] Pass changed-files list to tool wrappers; skip unchanged files
-- [ ] Add `changed_files_only` field to the scan API request body
+- [x] Add `--diff <base-ref>` flag to `armur scan` (e.g., `--diff HEAD~1`, `--diff main`)
+- [x] Implement git diff logic to extract list of changed files
+- [x] Pass changed-files list to tool wrappers; skip unchanged files
+- [x] Add `changed_files_only` field to the scan API request body
 - [ ] Document diff scanning in README
 
 ### 2.3 Plugin System for Custom Tools
-- [ ] Define plugin interface spec in `.armur.yml`:
+- [x] Define plugin interface spec in `.armur.yml`:
   ```yaml
   plugins:
     - name: my-tool
@@ -89,39 +89,38 @@ ordered by priority within each sprint.
       output-format: json
       language: go
   ```
-- [ ] Implement plugin loader that reads `.armur.yml` from the scanned repo root
-- [ ] Implement generic tool runner that executes plugin command and parses JSON output
-- [ ] Add plugin result category `custom_tool` in aggregated results
+- [x] Implement plugin loader that reads `.armur.yml` from the scanned repo root
+- [x] Implement generic tool runner that executes plugin command and parses JSON output
+- [x] Add plugin result category `custom_tool` in aggregated results
 - [ ] Document plugin system with examples in docs
 
 ### 2.4 Project-Level Configuration File
-- [ ] Support `.armur.yml` in the scanned repository root
-- [ ] Config options to support:
-  - [ ] `exclude` — glob patterns for files/dirs to skip
-  - [ ] `tools.enabled` — explicit tool allowlist
-  - [ ] `tools.disabled` — explicit tool blocklist
-  - [ ] `severity-threshold` — minimum severity to report (info/low/medium/high/critical)
-  - [ ] `fail-on-findings` — exit code 1 if findings exceed threshold (for CI use)
+- [x] Support `.armur.yml` in the scanned repository root
+- [x] Config options to support:
+  - [x] `exclude` — glob patterns for files/dirs to skip
+  - [x] `tools.enabled` — explicit tool allowlist
+  - [x] `tools.disabled` — explicit tool blocklist
+  - [x] `severity-threshold` — minimum severity to report (info/low/medium/high/critical)
+  - [x] `fail-on-findings` — exit code 1 if findings exceed threshold (for CI use)
 - [ ] Document all config options in README and docs
 
 ### 2.5 Smaller Docker Image
-- [ ] Refactor `Dockerfile` to use multi-stage builds
-- [ ] Create language-specific image variants:
-  - [ ] `armur:go` — Go tools only
-  - [ ] `armur:python` — Python tools only
-  - [ ] `armur:js` — JavaScript/TypeScript tools only
-  - [ ] `armur:full` — all tools (current behavior)
+- [x] Refactor `Dockerfile` to use multi-stage builds
+- [x] Create language-specific image variants:
+  - [x] `armur:go` — Go tools only
+  - [x] `armur:python` — Python tools only
+  - [x] `armur:js` — JavaScript/TypeScript tools only
+  - [x] `armur:full` — all tools (current behavior)
 - [ ] Publish image variants to Docker Hub with size documentation
-- [ ] Use `alpine` base where possible to reduce layer sizes
+- [x] Use `alpine` base where possible to reduce layer sizes
 - [ ] Document image variant selection in README
 
 ### 2.6 Code Quality Cleanup
-- [ ] Split `utils.go` (758 lines) into focused modules:
-  - [ ] `format.go` — result formatting and table rendering
-  - [ ] `history.go` — scan history management
-  - [ ] `output.go` — JSON/text output helpers
+- [x] Split `utils.go` (758 lines) into focused modules:
+  - [x] `format.go` — result formatting and table rendering
+  - [x] `report.go` — OWASP/SANS report generation
 - [ ] Standardize tool wrapper function signatures across all 18 tool files
-- [ ] Remove hardcoded paths (e.g., `/armur/repos`); move to config/env vars
+- [x] Remove hardcoded paths (e.g., `/armur/repos`); move to config/env vars
 - [ ] Fix all `golangci-lint` warnings on the codebase itself
 
 ---
