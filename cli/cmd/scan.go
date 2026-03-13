@@ -440,4 +440,6 @@ func init() {
 	scanCmd.Flags().StringP("diff", "d", "", "Only scan files changed since this git ref (e.g. HEAD~1, main)")
 	scanCmd.Flags().Bool("fail-on-findings", false, "Exit with code 1 if any findings are reported")
 	scanCmd.Flags().StringP("min-severity", "S", "", "Minimum severity to display (info, low, medium, high, critical)")
+	scanCmd.Flags().Bool("staged-only", false, "Scan only git-staged files (for pre-commit hooks)")
+	scanCmd.Flags().StringP("format", "f", "text", "Output format (text, json, sarif)")
 }

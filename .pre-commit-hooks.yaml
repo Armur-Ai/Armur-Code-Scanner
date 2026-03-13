@@ -1,0 +1,24 @@
+- id: armur-scan
+  name: Armur Security Scan
+  description: >
+    Runs Armur Code Scanner on staged files to catch security vulnerabilities
+    before they are committed. Requires the Armur CLI to be installed and
+    an Armur server running (or use `armur serve` for auto-start).
+  language: system
+  entry: armur scan --staged-only
+  types: [file]
+  pass_filenames: false
+  stages: [commit]
+  verbose: false
+
+- id: armur-scan-strict
+  name: Armur Security Scan (strict — fails on any finding)
+  description: >
+    Like armur-scan but exits with code 1 on any finding at medium severity
+    or above. Suitable for security-critical repositories.
+  language: system
+  entry: armur scan --staged-only --fail-on-findings --min-severity medium
+  types: [file]
+  pass_filenames: false
+  stages: [commit]
+  verbose: false
