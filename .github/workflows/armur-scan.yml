@@ -1,0 +1,161 @@
+# Armur Code Scanner — Reusable GitHub Actions workflow
+# ----------------------------------------------------------
+# This workflow runs the Armur scanner against the repository
+# and (optionally) uploads results to GitHub Code Scanning.
+#
+# Usage in your repository:
+#
+#   jobs:
+#     security:
+#       uses: armur-ai/armur-code-scanner/.github/workflows/armur-scan.yml@main
+#       with:
+#         language: go
+#         fail-on-severity: high
+#
+# Alternatively, copy the steps below into your own workflow.
+
+name: Armur Security Scan
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+  workflow_dispatch:
+    inputs:
+      language:
+        description: "Programming language (go, py, js, or leave blank for auto-detect)"
+        required: false
+        default: ""
+      fail-on-severity:
+        description: "Fail the workflow if findings at this severity or above are found"
+        required: false
+        default: "high"
+      output-format:
+        description: "Output format: sarif, json, or table"
+        required: false
+        default: "sarif"
+
+env:
+  ARMUR_VERSION: "latest"
+
+jobs:
+  armur-scan:
+    name: Armur Code Scanner
+    runs-on: ubuntu-latest
+    permissions:
+      # Required for uploading SARIF to GitHub Security tab
+      security-events: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v3
+
+      - name: Pull Armur scanner image
+        run: docker pull armurscanner/armur:${{ env.ARMUR_VERSION }} || true
+
+      - name: Start Armur server
+        run: |
+          docker run -d \
+            --name armur-server \
+            -p 4500:4500 \
+            -e ARMUR_API_KEY="${{ secrets.ARMUR_API_KEY }}" \
+            -v "${{ github.workspace }}:/workspace:ro" \
+            armurscanner/armur:${{ env.ARMUR_VERSION }}
+          # Wait for server to become ready
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:4500/health >/dev/null 2>&1; then
+              echo "Armur server is ready"
+              break
+            fi
+            echo "Waiting for server... ($i/30)"
+            sleep 2
+          done
+
+      - name: Run scan
+        id: scan
+        run: |
+          LANGUAGE="${{ github.event.inputs.language || '' }}"
+          FORMAT="${{ github.event.inputs.output-format || 'sarif' }}"
+
+          # Trigger scan on the checked-out workspace
+          RESPONSE=$(curl -sf -X POST http://localhost:4500/api/v1/scan/local \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.ARMUR_API_KEY }}" \
+            -d "{\"local_path\":\"/workspace\",\"language\":\"${LANGUAGE}\"}")
+
+          TASK_ID=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['task_id'])")
+          echo "task_id=$TASK_ID" >> "$GITHUB_OUTPUT"
+          echo "Scan task ID: $TASK_ID"
+
+          # Poll for completion (up to 10 minutes)
+          for i in $(seq 1 60); do
+            STATUS_RESP=$(curl -sf \
+              -H "Authorization: Bearer ${{ secrets.ARMUR_API_KEY }}" \
+              "http://localhost:4500/api/v1/status/${TASK_ID}")
+            STATUS=$(echo "$STATUS_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status',''))")
+            if [ "$STATUS" = "success" ]; then
+              echo "Scan complete"
+              # Fetch SARIF output
+              curl -sf \
+                -H "Authorization: Bearer ${{ secrets.ARMUR_API_KEY }}" \
+                "http://localhost:4500/api/v1/status/${TASK_ID}?format=sarif" \
+                -o armur-results.sarif
+              break
+            fi
+            echo "Scan status: $STATUS (poll $i/60)"
+            sleep 10
+          done
+
+      - name: Upload SARIF to GitHub Security tab
+        if: always() && hashFiles('armur-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: armur-results.sarif
+          category: armur-code-scanner
+
+      - name: Stop Armur server
+        if: always()
+        run: docker stop armur-server || true
+
+      - name: Check for findings
+        if: github.event.inputs.fail-on-severity != '' || github.event_name != 'workflow_dispatch'
+        run: |
+          SEVERITY="${{ github.event.inputs.fail-on-severity || 'high' }}"
+          SARIF_FILE="armur-results.sarif"
+
+          if [ ! -f "$SARIF_FILE" ]; then
+            echo "No SARIF file found, skipping severity check"
+            exit 0
+          fi
+
+          # Count findings at or above the specified severity level
+          case "$SEVERITY" in
+            critical) LEVELS="error" ;;
+            high)     LEVELS="error" ;;
+            medium)   LEVELS="error warning" ;;
+            low)      LEVELS="error warning note" ;;
+            *)        LEVELS="error" ;;
+          esac
+
+          COUNT=0
+          for LEVEL in $LEVELS; do
+            N=$(python3 -c "
+import json, sys
+data = json.load(open('$SARIF_FILE'))
+runs = data.get('runs', [])
+count = sum(1 for run in runs for r in run.get('results', []) if r.get('level') == '$LEVEL')
+print(count)
+")
+            COUNT=$((COUNT + N))
+          done
+
+          echo "Findings at severity '$SEVERITY' or above: $COUNT"
+          if [ "$COUNT" -gt 0 ]; then
+            echo "::error::Armur found $COUNT security finding(s) at severity '$SEVERITY' or above"
+            exit 1
+          fi
