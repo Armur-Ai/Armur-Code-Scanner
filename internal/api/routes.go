@@ -23,6 +23,9 @@ func RegisterRoutes(r *gin.Engine) {
 		// Status
 		api.GET("/status/:task_id", TaskStatus)
 
+		// Progress (SSE stream)
+		api.GET("/progress/:task_id", TaskProgress)
+
 		// Reports
 		api.GET("/reports/owasp/:task_id", TaskOwasp)
 		api.GET("/reports/sans/:task_id", TaskSans)

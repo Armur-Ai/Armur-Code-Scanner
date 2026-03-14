@@ -184,32 +184,8 @@ for security vulnerabilities using the Armur Code Scanner service.`,
 		}
 
 		fmt.Println(color.GreenString("Scan initiated successfully. Task ID: %s", taskID))
-		// utils.SaveToHistory(taskID)
 
-		s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-		s.Suffix = " Waiting for scan to complete..."
-		s.Start()
-
-		var scanResult map[string]interface{}
-		var status string
-		for {
-			status, scanResult, err = apiClient.GetTaskStatus(taskID)
-			if err != nil {
-				s.Stop()
-				color.Red("Error getting task status: %v", err)
-				os.Exit(1)
-			}
-
-			if status == "success" {
-				s.Stop()
-				break
-			} else if status == "failed" {
-				s.Stop()
-				color.Red("Scan failed.")
-				os.Exit(1)
-			}
-			time.Sleep(2 * time.Second)
-		}
+		scanResult := waitForScan(apiClient, taskID)
 
 		if outputFormat == "json" {
 			utils.PrintResultsJSON(scanResult)
@@ -217,6 +193,125 @@ for security vulnerabilities using the Armur Code Scanner service.`,
 			printFormattedResults(scanResult)
 		}
 	},
+}
+
+// waitForScan waits for a scan to complete, streaming progress when available,
+// and falling back to simple polling. Returns the scan results.
+func waitForScan(apiClient *api.APIClient, taskID string) map[string]interface{} {
+	// Try SSE streaming first
+	updates := make(chan api.ProgressUpdate, 16)
+	go apiClient.StreamProgress(taskID, updates)
+
+	// Give SSE a moment to connect
+	streamActive := false
+	select {
+	case update, ok := <-updates:
+		if ok {
+			streamActive = true
+			displayProgress(update)
+			if update.Status == "completed" || update.Status == "failed" {
+				return fetchFinalResult(apiClient, taskID, update.Status)
+			}
+		}
+	case <-time.After(3 * time.Second):
+		// SSE not available, fall back to polling
+	}
+
+	if streamActive {
+		// Continue reading SSE updates
+		for update := range updates {
+			displayProgress(update)
+			if update.Status == "completed" || update.Status == "failed" {
+				return fetchFinalResult(apiClient, taskID, update.Status)
+			}
+		}
+	}
+
+	// Fallback: simple polling with spinner
+	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+	s.Suffix = " Waiting for scan to complete..."
+	s.Start()
+
+	for {
+		status, result, err := apiClient.GetTaskStatus(taskID)
+		if err != nil {
+			s.Stop()
+			color.Red("Error getting task status: %v", err)
+			os.Exit(1)
+		}
+
+		if status == "success" {
+			s.Stop()
+			return result
+		} else if status == "failed" {
+			s.Stop()
+			color.Red("Scan failed.")
+			os.Exit(1)
+		}
+		time.Sleep(2 * time.Second)
+	}
+}
+
+// displayProgress renders the current progress to the terminal.
+func displayProgress(update api.ProgressUpdate) {
+	// Clear previous output and redraw
+	fmt.Print("\033[2K\r")
+
+	running := []string{}
+	completed := 0
+	totalFindings := 0
+
+	for _, t := range update.Tools {
+		switch t.Status {
+		case "running":
+			elapsed := ""
+			if t.StartedAt > 0 {
+				dur := time.Since(time.Unix(t.StartedAt, 0)).Truncate(time.Second)
+				elapsed = fmt.Sprintf(" (%s)", dur)
+			}
+			running = append(running, t.Tool+elapsed)
+		case "completed":
+			completed++
+			totalFindings += t.Findings
+		case "failed":
+			completed++
+		}
+	}
+
+	progress := fmt.Sprintf("[%d/%d]", completed, update.TotalTools)
+	findingStr := fmt.Sprintf("%d findings", totalFindings)
+
+	if len(running) > 0 {
+		toolList := strings.Join(running, ", ")
+		fmt.Printf("%s Running: %s | %s",
+			color.CyanString(progress),
+			color.YellowString(toolList),
+			color.GreenString(findingStr),
+		)
+	} else {
+		fmt.Printf("%s %s | %s",
+			color.CyanString(progress),
+			color.GreenString("Waiting..."),
+			color.GreenString(findingStr),
+		)
+	}
+}
+
+// fetchFinalResult retrieves the final scan result after completion.
+func fetchFinalResult(apiClient *api.APIClient, taskID, status string) map[string]interface{} {
+	fmt.Println() // newline after progress line
+
+	if status == "failed" {
+		color.Red("Scan failed.")
+		os.Exit(1)
+	}
+
+	_, result, err := apiClient.GetTaskStatus(taskID)
+	if err != nil {
+		color.Red("Error getting final results: %v", err)
+		os.Exit(1)
+	}
+	return result
 }
 
 func printFormattedResults(results map[string]interface{}) {

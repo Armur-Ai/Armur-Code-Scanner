@@ -162,6 +162,84 @@ func (c *APIClient) GetTaskStatus(taskID string) (string, map[string]interface{}
 	return status, data, nil
 }
 
+// ProgressUpdate represents a real-time progress event from the server.
+type ProgressUpdate struct {
+	TaskID     string         `json:"task_id"`
+	Status     string         `json:"status"`
+	TotalTools int            `json:"total_tools"`
+	Completed  int            `json:"completed"`
+	StartedAt  int64          `json:"started_at"`
+	Tools      []ToolProgress `json:"tools"`
+}
+
+// ToolProgress represents the status of a single tool.
+type ToolProgress struct {
+	Tool      string  `json:"tool"`
+	Status    string  `json:"status"`
+	StartedAt int64   `json:"started_at,omitempty"`
+	EndedAt   int64   `json:"ended_at,omitempty"`
+	Findings  int     `json:"findings"`
+	Error     string  `json:"error,omitempty"`
+	Duration  float64 `json:"duration_secs,omitempty"`
+}
+
+// StreamProgress connects to the SSE progress endpoint and sends updates to a channel.
+// The channel is closed when the scan completes or an error occurs.
+func (c *APIClient) StreamProgress(taskID string, updates chan<- ProgressUpdate) {
+	defer close(updates)
+
+	url := fmt.Sprintf("%s/api/v1/progress/%s", strings.TrimRight(c.BaseURL, "/"), taskID)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return
+	}
+	req.Header.Set("Accept", "text/event-stream")
+	if c.APIKey != "" {
+		req.Header.Set("Authorization", "Bearer "+c.APIKey)
+	}
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+
+	buf := make([]byte, 4096)
+	var partial string
+	for {
+		n, err := resp.Body.Read(buf)
+		if n > 0 {
+			partial += string(buf[:n])
+			// Process complete SSE messages
+			for {
+				idx := strings.Index(partial, "\n\n")
+				if idx < 0 {
+					break
+				}
+				message := partial[:idx]
+				partial = partial[idx+2:]
+
+				// Parse SSE data field
+				for _, line := range strings.Split(message, "\n") {
+					if strings.HasPrefix(line, "data: ") {
+						data := strings.TrimPrefix(line, "data: ")
+						var update ProgressUpdate
+						if jsonErr := json.Unmarshal([]byte(data), &update); jsonErr == nil {
+							updates <- update
+							if update.Status == "completed" || update.Status == "failed" {
+								return
+							}
+						}
+					}
+				}
+			}
+		}
+		if err != nil {
+			return
+		}
+	}
+}
+
 // GetOwaspReport retrieves the OWASP report for a completed scan task.
 func (c *APIClient) GetOwaspReport(taskID string) (interface{}, error) {
 	url := fmt.Sprintf("%s/api/v1/reports/owasp/%s", strings.TrimRight(c.BaseURL, "/"), taskID)
