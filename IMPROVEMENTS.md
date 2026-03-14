@@ -178,54 +178,54 @@ ordered by priority within each sprint.
 ## Sprint 4 — Language Expansion
 
 ### 4.1 Rust Support
-- [ ] Add `cargo-audit` integration (dependency vulnerability scanning)
-- [ ] Add `cargo-geiger` integration (unsafe code detection)
-- [ ] Add `clippy` integration (linting and common mistakes)
-- [ ] Add Rust file extension detection (`*.rs`, `Cargo.toml`)
-- [ ] Add Rust to language detection logic
-- [ ] Add Rust fixtures to `testdata/`
+- [x] Add `cargo-audit` integration (dependency vulnerability scanning)
+- [x] Add `cargo-geiger` integration (unsafe code detection)
+- [x] Add `clippy` integration (linting and common mistakes)
+- [x] Add Rust file extension detection (`*.rs`, `Cargo.toml`)
+- [x] Add Rust to language detection logic
+- [x] Add Rust fixtures to `testdata/`
 - [ ] Document Rust support in README
 
 ### 4.2 Java / Kotlin Support
-- [ ] Add `SpotBugs` integration (bug pattern detection)
-- [ ] Add `PMD` integration (code quality)
-- [ ] Add `OWASP Dependency-Check` integration (SCA for Java)
-- [ ] Add Java/Kotlin file extension detection
-- [ ] Add Java/Kotlin to language detection logic
-- [ ] Add Java/Kotlin fixtures to `testdata/`
+- [x] Add `SpotBugs` integration (bug pattern detection)
+- [x] Add `PMD` integration (code quality)
+- [x] Add `OWASP Dependency-Check` integration (SCA for Java)
+- [x] Add Java/Kotlin file extension detection
+- [x] Add Java/Kotlin to language detection logic
+- [x] Add Java/Kotlin fixtures to `testdata/`
 - [ ] Document Java/Kotlin support in README
 
 ### 4.3 Ruby Support
-- [ ] Add `Brakeman` integration (Rails security scanner)
-- [ ] Add `bundler-audit` integration (gem vulnerability scanning)
-- [ ] Add Ruby file extension detection (`*.rb`, `Gemfile`)
-- [ ] Add Ruby fixtures to `testdata/`
+- [x] Add `Brakeman` integration (Rails security scanner)
+- [x] Add `bundler-audit` integration (gem vulnerability scanning)
+- [x] Add Ruby file extension detection (`*.rb`, `Gemfile`)
+- [x] Add Ruby fixtures to `testdata/`
 
 ### 4.4 PHP Support
-- [ ] Add `PHPCS` with security sniffs integration
-- [ ] Add `Psalm` integration (static analysis)
-- [ ] Add PHP file extension detection (`*.php`)
-- [ ] Add PHP fixtures to `testdata/`
+- [x] Add `PHPCS` with security sniffs integration
+- [x] Add `Psalm` integration (static analysis)
+- [x] Add PHP file extension detection (`*.php`)
+- [x] Add PHP fixtures to `testdata/`
 
 ### 4.5 C / C++ Support
-- [ ] Add `cppcheck` integration
-- [ ] Add `Flawfinder` integration (security-focused C/C++ scanner)
-- [ ] Add C/C++ file extension detection
-- [ ] Add C/C++ fixtures to `testdata/`
+- [x] Add `cppcheck` integration
+- [x] Add `Flawfinder` integration (security-focused C/C++ scanner)
+- [x] Add C/C++ file extension detection
+- [x] Add C/C++ fixtures to `testdata/`
 
 ### 4.6 Infrastructure / IaC Expansion
-- [ ] Add `hadolint` integration (Dockerfile linting)
-- [ ] Add `tfsec` integration (Terraform security)
-- [ ] Add `kics` integration (multi-IaC platform)
-- [ ] Add `kube-linter` integration (Kubernetes manifest validation)
-- [ ] Add `kube-score` integration (Kubernetes best practices)
-- [ ] Detect IaC file types automatically (`*.tf`, `Dockerfile`, `*.yaml` with k8s markers)
+- [x] Add `hadolint` integration (Dockerfile linting)
+- [x] Add `tfsec` integration (Terraform security)
+- [x] Add `kics` integration (multi-IaC platform)
+- [x] Add `kube-linter` integration (Kubernetes manifest validation)
+- [x] Add `kube-score` integration (Kubernetes best practices)
+- [x] Detect IaC file types automatically (`*.tf`, `Dockerfile`, `*.yaml` with k8s markers)
 
 ### 4.7 Solidity / Web3 Support
-- [ ] Add `Slither` integration (Solidity static analyzer)
-- [ ] Add `Mythril` integration (symbolic execution for smart contracts)
-- [ ] Add Solidity file extension detection (`*.sol`)
-- [ ] Add Solidity fixtures to `testdata/`
+- [x] Add `Slither` integration (Solidity static analyzer)
+- [x] Add `Mythril` integration (symbolic execution for smart contracts)
+- [x] Add Solidity file extension detection (`*.sol`)
+- [x] Add Solidity fixtures to `testdata/`
 
 ---
 
