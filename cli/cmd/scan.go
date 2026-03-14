@@ -151,6 +151,11 @@ for security vulnerabilities using the Armur Code Scanner service.`,
 		if flagKey, _ := cmd.Root().PersistentFlags().GetString("api-key"); flagKey != "" {
 			cfg.APIKey = flagKey
 		}
+
+		// Auto-start server if not running (unless --no-server is set)
+		noServer, _ := cmd.Flags().GetBool("no-server")
+		cfg.API.URL = ensureServer(cfg.API.URL, noServer)
+
 		apiClient := api.NewClient(cfg.API.URL).WithAPIKey(cfg.APIKey)
 		target := args[0]
 		language, _ := cmd.Flags().GetString("language")
@@ -442,4 +447,5 @@ func init() {
 	scanCmd.Flags().StringP("min-severity", "S", "", "Minimum severity to display (info, low, medium, high, critical)")
 	scanCmd.Flags().Bool("staged-only", false, "Scan only git-staged files (for pre-commit hooks)")
 	scanCmd.Flags().StringP("format", "f", "text", "Output format (text, json, sarif)")
+	scanCmd.Flags().Bool("no-server", false, "Skip auto-starting the embedded server")
 }
