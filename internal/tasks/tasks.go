@@ -393,6 +393,110 @@ func buildSimpleScanRunnersNamed(dirPath, language string) ([]func() toolResult,
 			}),
 		)
 		names = append(names, "eslint")
+	case "rust":
+		runners = append(runners,
+			withTimeout("cargo-audit", func() toolResult {
+				r, err := tools.RunCargoAudit(dirPath)
+				return toolResult{"cargo-audit", r, err}
+			}),
+			withTimeout("cargo-geiger", func() toolResult {
+				r, err := tools.RunCargoGeiger(dirPath)
+				return toolResult{"cargo-geiger", r, err}
+			}),
+			withTimeout("clippy", func() toolResult {
+				r, err := tools.RunClippy(dirPath)
+				return toolResult{"clippy", r, err}
+			}),
+		)
+		names = append(names, "cargo-audit", "cargo-geiger", "clippy")
+	case "java":
+		runners = append(runners,
+			withTimeout("spotbugs", func() toolResult {
+				r, err := tools.RunSpotBugs(dirPath)
+				return toolResult{"spotbugs", r, err}
+			}),
+			withTimeout("pmd", func() toolResult {
+				r, err := tools.RunPMD(dirPath)
+				return toolResult{"pmd", r, err}
+			}),
+			withTimeout("dependency-check", func() toolResult {
+				r, err := tools.RunDependencyCheck(dirPath)
+				return toolResult{"dependency-check", r, err}
+			}),
+		)
+		names = append(names, "spotbugs", "pmd", "dependency-check")
+	case "ruby":
+		runners = append(runners,
+			withTimeout("brakeman", func() toolResult {
+				r, err := tools.RunBrakeman(dirPath)
+				return toolResult{"brakeman", r, err}
+			}),
+			withTimeout("bundler-audit", func() toolResult {
+				r, err := tools.RunBundlerAudit(dirPath)
+				return toolResult{"bundler-audit", r, err}
+			}),
+		)
+		names = append(names, "brakeman", "bundler-audit")
+	case "php":
+		runners = append(runners,
+			withTimeout("phpcs", func() toolResult {
+				r, err := tools.RunPHPCS(dirPath)
+				return toolResult{"phpcs", r, err}
+			}),
+			withTimeout("psalm", func() toolResult {
+				r, err := tools.RunPsalm(dirPath)
+				return toolResult{"psalm", r, err}
+			}),
+		)
+		names = append(names, "phpcs", "psalm")
+	case "c":
+		runners = append(runners,
+			withTimeout("cppcheck", func() toolResult {
+				r, err := tools.RunCppcheck(dirPath)
+				return toolResult{"cppcheck", r, err}
+			}),
+			withTimeout("flawfinder", func() toolResult {
+				r, err := tools.RunFlawfinder(dirPath)
+				return toolResult{"flawfinder", r, err}
+			}),
+		)
+		names = append(names, "cppcheck", "flawfinder")
+	case "iac":
+		runners = append(runners,
+			withTimeout("hadolint", func() toolResult {
+				r, err := tools.RunHadolint(dirPath)
+				return toolResult{"hadolint", r, err}
+			}),
+			withTimeout("tfsec", func() toolResult {
+				r, err := tools.RunTfsec(dirPath)
+				return toolResult{"tfsec", r, err}
+			}),
+			withTimeout("kics", func() toolResult {
+				r, err := tools.RunKICS(dirPath)
+				return toolResult{"kics", r, err}
+			}),
+			withTimeout("kube-linter", func() toolResult {
+				r, err := tools.RunKubeLinter(dirPath)
+				return toolResult{"kube-linter", r, err}
+			}),
+			withTimeout("kube-score", func() toolResult {
+				r, err := tools.RunKubeScore(dirPath)
+				return toolResult{"kube-score", r, err}
+			}),
+		)
+		names = append(names, "hadolint", "tfsec", "kics", "kube-linter", "kube-score")
+	case "sol":
+		runners = append(runners,
+			withTimeout("slither", func() toolResult {
+				r, err := tools.RunSlither(dirPath)
+				return toolResult{"slither", r, err}
+			}),
+			withTimeout("mythril", func() toolResult {
+				r, err := tools.RunMythril(dirPath)
+				return toolResult{"mythril", r, err}
+			}),
+		)
+		names = append(names, "slither", "mythril")
 	}
 
 	return runners, names

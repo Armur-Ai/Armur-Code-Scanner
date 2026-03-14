@@ -104,26 +104,62 @@ func CloneRepo(repositoryURL string) (string, error) {
 	return tempDir, nil
 }
 
-// DetectRepoLanguage detects the language of a repository
+// DetectRepoLanguage detects the primary language of a repository by counting source files.
 func DetectRepoLanguage(directory string) string {
-	languages := map[string]int{"go": 0, "py": 0, "js": 0}
+	languages := map[string]int{
+		"go": 0, "py": 0, "js": 0,
+		"rust": 0, "java": 0, "ruby": 0,
+		"php": 0, "c": 0, "sol": 0,
+	}
 
 	filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
+		if info.IsDir() {
+			return nil
+		}
+		name := info.Name()
+		switch {
+		case strings.HasSuffix(name, ".go"):
+			languages["go"]++
+		case strings.HasSuffix(name, ".py"):
+			languages["py"]++
+		case strings.HasSuffix(name, ".js") || strings.HasSuffix(name, ".ts"):
+			languages["js"]++
+		case strings.HasSuffix(name, ".rs"):
+			languages["rust"]++
+		case strings.HasSuffix(name, ".java") || strings.HasSuffix(name, ".kt"):
+			languages["java"]++
+		case strings.HasSuffix(name, ".rb"):
+			languages["ruby"]++
+		case strings.HasSuffix(name, ".php"):
+			languages["php"]++
+		case strings.HasSuffix(name, ".c") || strings.HasSuffix(name, ".cpp") || strings.HasSuffix(name, ".h"):
+			languages["c"]++
+		case strings.HasSuffix(name, ".sol"):
+			languages["sol"]++
+		}
+		return nil
+	})
+
+	// Prefer IaC if Dockerfile or Terraform files are present.
+	iacCount := 0
+	filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 		if !info.IsDir() {
-			switch {
-			case strings.HasSuffix(info.Name(), ".go"):
-				languages["go"]++
-			case strings.HasSuffix(info.Name(), ".py"):
-				languages["py"]++
-			case strings.HasSuffix(info.Name(), ".js"):
-				languages["js"]++
+			n := info.Name()
+			if n == "Dockerfile" || strings.HasSuffix(n, ".tf") || strings.HasSuffix(n, ".tfvars") {
+				iacCount++
 			}
 		}
 		return nil
 	})
+	if iacCount > 0 {
+		languages["iac"] = iacCount
+	}
 
 	maxLang := ""
 	maxCount := 0
@@ -137,15 +173,27 @@ func DetectRepoLanguage(directory string) string {
 	return maxLang
 }
 
-// DetectFileLanguage detects the language of a file
+// DetectFileLanguage detects the language of a file by its extension.
 func DetectFileLanguage(file string) string {
 	switch {
 	case strings.HasSuffix(file, ".go"):
 		return "go"
 	case strings.HasSuffix(file, ".py"):
 		return "py"
-	case strings.HasSuffix(file, ".js"):
+	case strings.HasSuffix(file, ".js") || strings.HasSuffix(file, ".ts"):
 		return "js"
+	case strings.HasSuffix(file, ".rs"):
+		return "rust"
+	case strings.HasSuffix(file, ".java") || strings.HasSuffix(file, ".kt"):
+		return "java"
+	case strings.HasSuffix(file, ".rb"):
+		return "ruby"
+	case strings.HasSuffix(file, ".php"):
+		return "php"
+	case strings.HasSuffix(file, ".c") || strings.HasSuffix(file, ".cpp") || strings.HasSuffix(file, ".h"):
+		return "c"
+	case strings.HasSuffix(file, ".sol"):
+		return "sol"
 	default:
 		return ""
 	}

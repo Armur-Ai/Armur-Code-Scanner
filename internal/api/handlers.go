@@ -13,6 +13,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// validLanguages is the set of language codes accepted by the scan API.
+var validLanguages = map[string]bool{
+	"go": true, "py": true, "js": true,
+	"rust": true, "java": true, "ruby": true,
+	"php": true, "c": true, "iac": true, "sol": true,
+}
+
+// isValidLanguage returns true when lang is a recognised language code.
+func isValidLanguage(lang string) bool {
+	return validLanguages[lang]
+}
+
 // reposBaseDir returns the base directory for temporary scan files.
 // Reads ARMUR_REPOS_DIR env var; falls back to /armur/repos.
 func reposBaseDir() string {
@@ -62,8 +74,8 @@ func ScanHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if request.Language != "" && request.Language != "go" && request.Language != "py" && request.Language != "js" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid language: must be one of go, py, js"})
+	if request.Language != "" && !isValidLanguage(request.Language) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid language: must be one of go, py, js, rust, java, ruby, php, c, iac, sol"})
 		return
 	}
 
@@ -102,8 +114,8 @@ func AdvancedScanResult(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if request.Language != "" && request.Language != "go" && request.Language != "py" && request.Language != "js" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid language: must be one of go, py, js"})
+	if request.Language != "" && !isValidLanguage(request.Language) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid language: must be one of go, py, js, rust, java, ruby, php, c, iac, sol"})
 		return
 	}
 
@@ -317,8 +329,8 @@ func ScanLocalHandler(c *gin.Context) {
 		return
 	}
 
-	if request.Language != "" && request.Language != "go" && request.Language != "py" && request.Language != "js" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid language"})
+	if request.Language != "" && !isValidLanguage(request.Language) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid language: must be one of go, py, js, rust, java, ruby, php, c, iac, sol"})
 		return
 	}
 

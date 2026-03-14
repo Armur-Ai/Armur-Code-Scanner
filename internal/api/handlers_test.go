@@ -53,7 +53,7 @@ func TestScanHandler_InvalidLanguage(t *testing.T) {
 	r := newRouter()
 	body, _ := json.Marshal(map[string]string{
 		"repository_url": "https://github.com/user/repo",
-		"language":       "ruby",
+		"language":       "cobol",
 	})
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/scan/repo", bytes.NewBuffer(body))
@@ -83,7 +83,7 @@ func TestAdvancedScanResult_InvalidLanguage(t *testing.T) {
 	r := newRouter()
 	body, _ := json.Marshal(map[string]string{
 		"repository_url": "https://github.com/user/repo",
-		"language":       "java",
+		"language":       "cobol",
 	})
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/advanced-scan/repo", bytes.NewBuffer(body))
@@ -127,7 +127,7 @@ func TestScanLocalHandler_InvalidLanguage(t *testing.T) {
 	r := newRouter()
 	body, _ := json.Marshal(map[string]string{
 		"local_path": "/tmp",
-		"language":   "php",
+		"language":   "cobol",
 	})
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/scan/local", bytes.NewBuffer(body))

@@ -30,6 +30,44 @@ var LanguageFileExtensions = map[string][]string{
 		".cgo",   // Go Cgo files
 		".proto", // Protocol Buffer files
 	},
+	"rust": {
+		".rs",   // Rust source files
+		".toml", // Cargo.toml
+	},
+	"java": {
+		".java",   // Java source files
+		".kt",     // Kotlin source files
+		".kts",    // Kotlin script files
+		".gradle", // Gradle build files
+		".xml",    // Maven pom.xml
+	},
+	"ruby": {
+		".rb",   // Ruby source files
+		".rake", // Rake task files
+		".gemspec", // Gem spec files
+	},
+	"php": {
+		".php",  // PHP source files
+		".phtml", // PHP HTML templates
+	},
+	"c": {
+		".c",   // C source files
+		".h",   // C header files
+		".cpp", // C++ source files
+		".cc",  // C++ source files
+		".cxx", // C++ source files
+		".hpp", // C++ header files
+	},
+	"iac": {
+		".tf",      // Terraform files
+		".tfvars",  // Terraform variable files
+		".yaml",    // YAML (k8s, Ansible, etc.)
+		".yml",     // YAML (k8s, Ansible, etc.)
+		".json",    // JSON config files
+	},
+	"sol": {
+		".sol", // Solidity smart contract files
+	},
 }
 
 const (
