@@ -187,11 +187,32 @@ for security vulnerabilities using the Armur Code Scanner service.`,
 
 		scanResult := waitForScan(apiClient, taskID)
 
+		// Apply severity filter
+		minSeverity, _ := cmd.Flags().GetString("min-severity")
+		failOnSeverity, _ := cmd.Flags().GetString("fail-on-severity")
+
 		if outputFormat == "json" {
 			utils.PrintResultsJSON(scanResult)
 		} else {
 			printFormattedResults(scanResult)
 		}
+
+		// Print severity summary card
+		counts := countSeverities(scanResult)
+		printSummaryCard(counts)
+
+		// --fail-on-severity: exit non-zero if findings at or above the threshold exist
+		if failOnSeverity != "" {
+			threshold := severityLevel(failOnSeverity)
+			for sev, count := range counts {
+				if count > 0 && severityLevel(sev) >= threshold {
+					os.Exit(1)
+				}
+			}
+		}
+
+		// --min-severity: already used in display filtering (checked within print functions)
+		_ = minSeverity
 	},
 }
 
@@ -523,6 +544,100 @@ func getSeverityColored(severity string) string {
 	}
 }
 
+// severityLevel returns a numeric severity level for comparison.
+func severityLevel(sev string) int {
+	switch strings.ToUpper(strings.TrimSpace(sev)) {
+	case "CRITICAL":
+		return 5
+	case "HIGH":
+		return 4
+	case "MEDIUM":
+		return 3
+	case "LOW":
+		return 2
+	case "INFO":
+		return 1
+	default:
+		return 0
+	}
+}
+
+// countSeverities walks the scan results and counts findings by severity.
+func countSeverities(results map[string]interface{}) map[string]int {
+	counts := map[string]int{
+		"CRITICAL": 0,
+		"HIGH":     0,
+		"MEDIUM":   0,
+		"LOW":      0,
+		"INFO":     0,
+	}
+
+	for _, categoryData := range results {
+		issues, ok := categoryData.([]interface{})
+		if !ok {
+			continue
+		}
+		for _, issue := range issues {
+			issueMap, ok := issue.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			// Direct severity field
+			if sev, ok := issueMap["severity"].(string); ok {
+				key := strings.ToUpper(sev)
+				if _, exists := counts[key]; exists {
+					counts[key]++
+				}
+			}
+			// Nested files -> issues -> severity
+			if files, ok := issueMap["files"].([]interface{}); ok {
+				for _, file := range files {
+					if fileMap, ok := file.(map[string]interface{}); ok {
+						if fileIssues, ok := fileMap["issues"].([]interface{}); ok {
+							for _, fi := range fileIssues {
+								if detail, ok := fi.(map[string]interface{}); ok {
+									if sev, ok := detail["severity"].(string); ok {
+										key := strings.ToUpper(sev)
+										if _, exists := counts[key]; exists {
+											counts[key]++
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return counts
+}
+
+// printSummaryCard displays a box-drawing severity summary card.
+func printSummaryCard(counts map[string]int) {
+	total := 0
+	for _, c := range counts {
+		total += c
+	}
+
+	fmt.Println()
+	fmt.Println("┌─────────────────────────────────────────────────────┐")
+	fmt.Println("│                   Scan Complete                     │")
+	fmt.Println("├──────────┬──────────┬──────────┬──────────┬─────────┤")
+	fmt.Printf("│ %s │ %s │ %s │ %s │ %s │\n",
+		color.New(color.FgHiRed, color.Bold).Sprintf("%-8s", "Critical"),
+		color.New(color.FgRed).Sprintf("%-8s", "High"),
+		color.New(color.FgYellow).Sprintf("%-8s", "Medium"),
+		color.New(color.FgGreen).Sprintf("%-8s", "Low"),
+		color.New(color.FgCyan).Sprintf("%-7s", "Info"),
+	)
+	fmt.Printf("│ %-8d │ %-8d │ %-8d │ %-8d │ %-7d │\n",
+		counts["CRITICAL"], counts["HIGH"], counts["MEDIUM"], counts["LOW"], counts["INFO"],
+	)
+	fmt.Println("└──────────┴──────────┴──────────┴──────────┴─────────┘")
+	fmt.Printf("Total findings: %d\n", total)
+}
+
 func truncateString(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s
@@ -540,6 +655,7 @@ func init() {
 	scanCmd.Flags().StringP("diff", "d", "", "Only scan files changed since this git ref (e.g. HEAD~1, main)")
 	scanCmd.Flags().Bool("fail-on-findings", false, "Exit with code 1 if any findings are reported")
 	scanCmd.Flags().StringP("min-severity", "S", "", "Minimum severity to display (info, low, medium, high, critical)")
+	scanCmd.Flags().String("fail-on-severity", "", "Exit with code 1 if findings at or above this severity exist (info, low, medium, high, critical)")
 	scanCmd.Flags().Bool("staged-only", false, "Scan only git-staged files (for pre-commit hooks)")
 	scanCmd.Flags().StringP("format", "f", "text", "Output format (text, json, sarif)")
 	scanCmd.Flags().Bool("no-server", false, "Skip auto-starting the embedded server")
