@@ -9,12 +9,12 @@ Built for the era of AI-generated code where automated security validation is es
 |---------|-------|---------|------------|
 | **v1.0** | Core Product | 5–14 | Polished CLI + TUI, typed Finding pipeline, zero-config UX, docs, SCA |
 | **v2.0** | The Agent Edge | 15–21 | Rebrand, AI layer, sandboxed DAST, exploit sim, attack paths, PR agent, MCP |
-| **v2.5** | Distribution | 22–27 | Homebrew/npm/pip, GitHub App, VS Code, CI/CD, onboarding, analytics |
-| **v3.0** | Scanner Depth | 28–33 | Deep secrets, taint tracking, API security, compliance, SBOM, supply chain |
-| **v4.0** | Enterprise | 34–39 | Teams/RBAC, scale, governance, threat intel, multi-tenant, LLM security |
+| **v2.5** | Distribution & Community | 22–31 | Install everywhere, GitHub App, VS Code, CI/CD, Slack/Teams, SaaS, community |
+| **v3.0** | Scanner Breadth | 32–43 | Secrets, SAST, API, compliance, SBOM, supply chain, language tiers, IaC deep, containers |
+| **v3.5** | Advanced Capabilities | 44–55 | Observability, SSE, rules marketplace, fuzzing, PII, crypto, binary, threat modeling |
+| **v4.0** | Scale & Intelligence | 56–59 | Distributed workers, debt tracker, threat intel, LLM security |
 
 ---
-
 ## Phase 1: Foundation (DONE) — Sprints 1–4
 
 These sprints established the core infrastructure: tests, error handling, auth, logging,
@@ -2118,11 +2118,10 @@ This is the highest-leverage distribution play available right now.
 - [ ] Add integration tests that start the MCP server and call each tool via the MCP protocol
 
 ---
-
-## Phase 4: Distribution (v2.5) — Sprints 22–27
+## Phase 4: Distribution & Community (v2.5) — Sprints 22–31
 
 Get Armur into every developer's hands. Homebrew, npm, pip, winget, Docker, GitHub App,
-VS Code extension, CI/CD for every platform, onboarding, and analytics.
+VS Code extension, CI/CD for every platform, onboarding, analytics, Slack/Teams, SaaS, and community.
 
 ---
 
@@ -2644,21 +2643,282 @@ A unified setup wizard for every integration, so developers never have to read d
 - [ ] Use `github.com/signintech/gopdf` or `maroto` library for PDF generation (no external dependencies)
 - [ ] `armur report pdf --schedule weekly --email ciso@example.com` — scheduled PDF delivery
 
+
+### Sprint 28 — Slack, Teams & Issue Tracker Integrations
+
+When a critical vulnerability is found at 2am in a nightly scan, the right person needs to know
+immediately — in the tool they use for communication, not in a dashboard they rarely visit.
+
+#### 28.1 Slack Integration
+
+- [ ] Create `Armur Security` Slack App at `api.slack.com/apps`
+- [ ] **Incoming webhook notifications**: when a scan completes with findings above threshold, POST to a configured Slack webhook:
+  ```
+  🛡 Armur Security Alert
+  ━━━━━━━━━━━━━━━━━━━━━
+  Repo: github.com/acme/api
+  Branch: main  ·  Scan: deep
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🔴 Critical  1   (new: 1)
+  🟠 High      5   (new: 2)
+  🟡 Medium    12
+  ━━━━━━━━━━━━━━━━━━━━━━━━━
+  [View findings]  [Assign]  [Suppress]
+  ```
+- [ ] Interactive buttons in Slack message: "View findings" → links to results, "Assign" → opens assignee picker in Slack, "Suppress" → mark as accepted risk
+- [ ] `/armur scan <url>` Slack slash command: trigger a scan from Slack; bot replies with results in a thread
+- [ ] `/armur status <task-id>` — check scan status from Slack
+- [ ] Configurable notification thresholds: only notify for CRITICAL, or CRITICAL+HIGH, etc.
+- [ ] Configuration: `armur config slack --webhook-url <url> --channel #security --notify-on critical`
+
+#### 28.2 Microsoft Teams Integration
+
+- [ ] Adaptive Card notification for Microsoft Teams (same trigger conditions as Slack)
+- [ ] Teams Connector webhook: post scan results as a rich card
+- [ ] Teams bot: `@Armur scan <url>` — trigger a scan from a Teams channel
+- [ ] Configuration: `armur config teams --webhook-url <url>`
+
+#### 28.3 Jira Integration
+
+- [ ] When a scan finds HIGH or CRITICAL findings, auto-create Jira issues:
+  - One Jira issue per finding (or one issue per scan with all findings as sub-tasks)
+  - Issue type: "Security Bug"
+  - Fields: Summary = finding message, Description = full finding detail + remediation, Priority = mapped from severity, Labels = ["security", "armur", tool-name]
+  - Link to the affected file/line in the Jira description
+- [ ] `armur config jira --url <jira-url> --project <key> --token <pat>` — configure Jira connection
+- [ ] `armur jira sync --task <scan-id>` — manually sync findings to Jira
+- [ ] Deduplication: don't create a Jira issue for a finding that already has an open issue (match by finding fingerprint)
+- [ ] Auto-close Jira issues when findings are resolved in subsequent scans
+
+#### 28.4 Linear Integration
+
+- [ ] Auto-create Linear issues for findings (same logic as Jira):
+  - Use Linear's GraphQL API
+  - Map finding severity to Linear priority (Urgent/High/Medium/Low)
+  - Add label "security" automatically
+- [ ] `armur config linear --token <token> --team <team-id>` — configure Linear connection
+- [ ] `armur linear sync --task <scan-id>` — sync findings to Linear
+
+#### 28.5 GitHub Issues Auto-Creation
+
+- [ ] `armur config github-issues --repo <owner/repo> --token <pat>` — configure GitHub Issues sink
+- [ ] On scan completion: create one GitHub Issue per CRITICAL/HIGH finding:
+  - Title: `[Armur] <severity>: <short-message> in <file>`
+  - Label: `security`, `armur`, `<severity>`
+  - Body: full finding detail, code snippet, remediation, link to PR if applicable
+- [ ] `armur github sync --task <scan-id>` — manual sync
+
+#### 28.6 PagerDuty Alerting
+
+- [ ] Trigger PagerDuty incidents for CRITICAL findings in production repos
+- [ ] `armur config pagerduty --service-key <key> --trigger-on critical` — configuration
+- [ ] Include finding details in the PagerDuty incident description
+- [ ] Auto-resolve PagerDuty incident when the finding is fixed in a subsequent scan
+
 ---
 
-## Phase 5: Scanner Depth (v3.0) — Sprints 28–33
+### Sprint 29 — Security Posture Badges & Social Proof
 
-Deep coverage across secrets, taint tracking, API security, compliance, SBOM, and supply chain.
+Badges are a viral mechanism. Every GitHub README with an Armur badge is an ad for Armur.
+
+#### 29.1 Dynamic Security Score Badge
+
+- [ ] Host a badge service at `badge.armur.ai`:
+  - `GET https://badge.armur.ai/<owner>/<repo>.svg` → SVG badge with current posture score
+  - Badge styles: flat, flat-square, plastic (same as shields.io)
+  - Colors: green (A/B), yellow (C), orange (D), red (F)
+- [ ] Badge content: `armur | A · 94` (grade + score) or `armur | 0 critical` (zero critical variant)
+- [ ] Badge is updated after every scan of the repo (GitHub App triggers the update)
+- [ ] `armur badge generate` — prints the Markdown and HTML for embedding the badge in README
+- [ ] Generate badges for the most common formats:
+  ```markdown
+  <!-- Standard -->
+  [![Armur Security Score](https://badge.armur.ai/owner/repo.svg)](https://armur.ai/scan/owner/repo)
+  <!-- Zero-critical variant -->
+  [![Zero Critical Findings](https://badge.armur.ai/owner/repo/critical.svg)](https://armur.ai/scan/owner/repo)
+  ```
+
+#### 29.2 Public Scan Results Page
+
+- [ ] Host `armur.ai/scan/<owner>/<repo>` — public findings summary page for open source repos
+- [ ] Page shows: posture grade, severity breakdown, top 10 findings (by risk score), trend over last 30 scans
+- [ ] Social sharing: "Share this scan" → Twitter/X, LinkedIn, Bluesky with pre-written message + badge
+- [ ] "Verify" button: lets a repo maintainer claim the scan and add their own notes
+- [ ] Embed widget: `<iframe src="https://armur.ai/embed/<owner>/<repo>">` — security summary card embeddable in project websites
+
+#### 29.3 Armur Security Leaderboard
+
+- [ ] Public leaderboard at `armur.ai/leaderboard` showing top-100 most secure open source repos
+- [ ] Ranked by: posture score, zero-critical streak (consecutive scans with zero critical findings), MTTR
+- [ ] Weekly "Most Improved" section: repos that improved their score the most in the last 7 days
+- [ ] Opt-in for open source repos: scan with `armur run --public` to appear on the leaderboard
+- [ ] Share your rank: "This repo is #47 in the Armur Security Leaderboard 🛡" — shareable card
+
+#### 29.4 README Security Section Generator
+
+- [ ] `armur readme generate` — generates a "Security" section for the project README:
+  ```markdown
+  ## Security
+
+  This project uses [Armur](https://armur.ai) for automated security scanning.
+
+  [![Armur Security Score](https://badge.armur.ai/owner/repo.svg)](https://armur.ai/scan/owner/repo)
+
+  To run a security scan locally:
+  \`\`\`bash
+  armur run .
+  \`\`\`
+
+  Found a vulnerability? Please see our [security policy](SECURITY.md).
+  ```
+- [ ] `armur readme update` — automatically inserts or updates the Security section in the existing README
+
+---
+
+### Sprint 30 — Armur Cloud (Hosted SaaS)
+
+Some users will not want to run their own server. Armur Cloud removes all infrastructure friction
+and adds team collaboration features that are impractical to self-host.
+
+#### 30.1 Cloud Infrastructure
+
+- [ ] Deploy the Armur server to a managed cloud environment (Fly.io or Railway for simplicity):
+  - API server: horizontally scalable (stateless Gin server)
+  - Workers: Asynq workers (scalable independently from API)
+  - Redis: managed Redis instance
+  - Storage: object storage (S3-compatible) for scan results and SBOMs
+- [ ] Custom domain: `api.armur.ai`
+- [ ] Status page: `status.armur.ai` (Uptime monitoring with public status)
+- [ ] Multi-region: at minimum US and EU (for GDPR compliance)
+
+#### 30.2 Web Dashboard
+
+- [ ] Build `app.armur.ai` — the Armur Cloud web dashboard
+- [ ] Pages:
+  - **Dashboard**: recent scans, posture score trend, critical findings requiring attention
+  - **Scans**: list of all scans with status, date, target, finding counts; trigger new scan
+  - **Findings**: unified findings table across all repos with filter/sort/search
+  - **Repositories**: list of connected repositories with their current posture score
+  - **Reports**: generate and download reports for any past scan
+  - **Settings**: API keys, team members, notification config, `.armur.yml` editor
+- [ ] Built with: Next.js + Tailwind CSS (or equivalent — keep the stack simple)
+- [ ] Real-time scan progress via WebSocket (same SSE events as the CLI TUI)
+- [ ] Mobile-responsive design
+
+#### 30.3 GitHub / GitLab OAuth Login
+
+- [ ] GitHub OAuth: "Sign in with GitHub" — scopes: `user:email`, `read:org`, `repo` (for private repo scanning)
+- [ ] GitLab OAuth: "Sign in with GitLab"
+- [ ] On first login: show connected repositories (via GitHub API); offer one-click scan for any repo
+- [ ] Auto-install the GitHub App when the user first connects a repository
+
+#### 30.4 Cloud API
+
+- [ ] Cloud API at `api.armur.ai` — same REST API as the self-hosted server, fully backward compatible
+- [ ] API key per user (generated on signup)
+- [ ] CLI works with Armur Cloud by setting: `armur config api-url https://api.armur.ai`
+- [ ] `armur login` command: opens browser for OAuth, stores token, automatically sets API URL to cloud
+
+#### 30.5 Pricing Tiers
+
+- [ ] **Free tier**: 10 scans/month, public repos only, community tools only, results retained 7 days
+- [ ] **Pro tier** ($0/month for open source, $15/month for private repos): unlimited scans, all tools, results retained 90 days, Slack/email notifications, 1 user
+- [ ] **Team tier** ($49/month): everything in Pro + 5 users, RBAC, Jira/Linear integration, 1-year retention
+- [ ] **Enterprise**: custom pricing, SSO, self-hosted option, SLA, dedicated support
+- [ ] Open source projects: free Pro tier (verified via GitHub stars + license check)
+
+---
+
+### Sprint 31 — Community, Content & Growth Flywheel
+
+Tools become category leaders not just from features, but from community, content, and
+making contributors successful. This sprint builds the ecosystem around Armur.
+
+#### 31.1 armur.ai Website
+
+- [ ] Landing page at `armur.ai`:
+  - Hero: animated terminal demo showing `armur run .` in action (asciinema embed or GIF)
+  - "Scan any codebase in 30 seconds" headline
+  - Language/IaC coverage grid (all supported tools + ecosystems with icons)
+  - Comparison table: Armur vs Semgrep vs SonarQube vs Snyk (open source features)
+  - Live demo: paste a code snippet, get instant findings (powered by `armur_scan_code` MCP tool / Cloud API)
+  - Testimonials from real users / contributor quotes
+  - "Get started" CTA: `brew install armur-ai/tap/armur`
+- [ ] Pricing page at `armur.ai/pricing` (maps to Sprint 30.5 tiers)
+- [ ] Blog at `armur.ai/blog` — technical content driving SEO
+
+#### 31.2 Documentation Site
+
+- [ ] Deploy docs at `docs.armur.ai` (using Docusaurus or Nextra — React-based, great SEO)
+- [ ] Sections:
+  - **Getting Started** (5-minute quickstart — must work end-to-end in one terminal session)
+  - **CLI Reference** (every command, every flag, every config option)
+  - **Tool Reference** (what each of the 18+ tools does, what it detects, version requirements)
+  - **Language Support** (per-language tool coverage matrix)
+  - **IaC Support** (per-IaC platform coverage matrix)
+  - **Configuration** (`.armur.yml` full reference)
+  - **CI/CD Integrations** (GitHub Actions, GitLab, CircleCI, Jenkins, etc.)
+  - **MCP Integration** (Claude Code, Cursor, Windsurf, Claude Desktop)
+  - **API Reference** (OpenAPI spec rendered with Scalar or Redoc)
+  - **Rules Marketplace** (how to install, create, and share rules)
+  - **Contributing** (how to add a new tool, new language, new compliance rule)
+- [ ] Search: Algolia DocSearch (free for open source)
+- [ ] Versioned docs: separate docs for each major CLI version
+
+#### 31.3 Demo Content
+
+- [ ] **asciinema demo**: record a 90-second terminal demo of `armur run .` on a real vulnerable repo — embed on landing page and README
+- [ ] **YouTube channel**: `youtube.com/@armur-ai`
+  - Video 1: "Find security vulnerabilities in your code in 30 seconds" (5 min quickstart)
+  - Video 2: "Armur + Claude Code: AI-powered security scanning" (MCP integration demo)
+  - Video 3: "How to add Armur to your GitHub Actions CI pipeline" (3 min tutorial)
+  - Video 4: "Scanning a vulnerable Node.js app with Armur" (real-world demo)
+- [ ] **Dev.to & Hashnode**: write introductory articles with embedded demos; cross-post
+- [ ] **Product Hunt launch**: submit when v1.0.0 ships; prepare launch assets (logo, screenshots, tagline)
+
+#### 31.4 Discord Community
+
+- [ ] Create Armur Discord server at `discord.gg/armur`
+- [ ] Channels: `#announcements`, `#help`, `#showcase` (share your scan results), `#rules-marketplace`, `#contributors`, `#general`
+- [ ] Discord bot (`@Armur Bot`): `/scan <github-url>` triggers a scan from within Discord; posts results in thread
+- [ ] Weekly "Security of the Week" post: scan a popular open source repo, share interesting findings in `#showcase`
+- [ ] Contributor office hours: weekly 30-minute voice call for contributors to ask questions
+
+#### 31.5 Contributor Program
+
+- [ ] `CONTRIBUTING.md` with a step-by-step guide: add a new tool, add a new language, add a compliance rule
+- [ ] "Good First Issues" tagged in GitHub Issues for newcomers
+- [ ] **Bounty program**: defined bounties for specific contributions:
+  - New tool integration (complete with tests + testdata): $50–200 depending on complexity
+  - New language support (full suite): $200–500
+  - New compliance framework mapping: $100–300
+  - Bug with reproduction case + fix: $25–100
+- [ ] **Security Hall of Fame**: contributors who report vulnerabilities in Armur itself
+- [ ] Contributor recognition: GitHub Sponsors profile, contributor badge in Discord, mention in release notes
+- [ ] `SECURITY.md` with responsible disclosure policy and contact email
+
+#### 31.6 "Scan Open Source" Program
+
+- [ ] `armur.ai/open-source` — program that scans popular open source projects monthly and publishes results publicly (with maintainer notification)
+- [ ] Reports published as blog posts: "Security analysis of the top 100 Go projects"
+- [ ] Responsible disclosure: findings shared privately with maintainers 30 days before publishing
+- [ ] This generates high-quality SEO content, press coverage, and demonstrates Armur's capabilities at scale
+- [ ] Partner with CNCF, Apache Foundation, and similar orgs for responsible scanning of their projects
+
+---
+## Phase 5: Scanner Breadth (v3.0) — Sprints 32–43
+
+Deep coverage across secrets, taint tracking, API security, compliance, SBOM, supply chain, language tiers, IaC deep, and container image security.
 These sprints make Armur the most comprehensive open-source scanner available.
 
 ---
 
-### Sprint 28 — Secrets Detection: Comprehensive & Deep
+### Sprint 32 — Secrets Detection: Comprehensive & Deep
 
 The current trufflehog3 integration scans only the working tree. This sprint makes secrets detection
 deep, validated, and actionable.
 
-#### 28.1 Git History Scanning
+#### 32.1 Git History Scanning
 
 - [ ] **Gitleaks** integration (fast, accurate secrets scanner with excellent rule coverage)
   - Run: `gitleaks detect --source <dir> --report-format json --report-path results.json`
@@ -2671,7 +2931,7 @@ deep, validated, and actionable.
 - [ ] Add `--scan-history` flag to `armur run` and API: when true, scan full git history (slow but thorough)
 - [ ] When history scanning: deduplicate secrets found in both current tree and history; annotate with earliest commit date
 
-#### 28.2 Secret Validation
+#### 32.2 Secret Validation
 
 - [ ] For detected secrets, optionally validate if they are still active (opt-in via `.armur.yml: secrets.validate: true`):
   - **AWS Access Keys**: call `sts:GetCallerIdentity` — if 200: mark as ACTIVE (critical), if 403: mark as INVALID
@@ -2682,14 +2942,14 @@ deep, validated, and actionable.
 - [ ] Add `Finding.SecretStatus` field: `"active"` | `"expired"` | `"invalid"` | `"unvalidated"`
 - [ ] Mark validated active secrets as `SeverityCritical`; unvalidated secrets as `SeverityHigh`
 
-#### 28.3 Git Blame Integration
+#### 32.3 Git Blame Integration
 
 - [ ] For each detected secret: run `git blame -L <line>,<line> <file>` to get commit hash, author, date
 - [ ] Populate `Finding.BlameCommit`, `Finding.BlameAuthor`, `Finding.BlameDate` fields
 - [ ] Display in CLI: "Introduced by: jane@example.com in commit abc1234 on 2025-01-15"
 - [ ] Include git blame data in HTML reports for accountability tracking
 
-#### 28.4 Custom Secret Patterns & Allowlists
+#### 32.4 Custom Secret Patterns & Allowlists
 
 - [ ] `.armur.yml` secrets configuration:
   ```yaml
@@ -2708,7 +2968,7 @@ deep, validated, and actionable.
 - [ ] Load and apply custom patterns during gitleaks/trufflehog execution (via gitleaks custom config)
 - [ ] Allowlist entries suppress findings without removing them from the raw count (audit trail preserved)
 
-#### 28.5 Entropy-Based Detection
+#### 32.5 Entropy-Based Detection
 
 - [ ] Implement high-entropy string detection as a standalone pass (complement to rule-based detection):
   - Scan all string literals in source code
@@ -2719,12 +2979,12 @@ deep, validated, and actionable.
 
 ---
 
-### Sprint 29 — Advanced Static Analysis (Taint Tracking & Data Flow)
+### Sprint 33 — Advanced Static Analysis (Taint Tracking & Data Flow)
 
 Most tools in Armur today are pattern-based. This sprint adds semantic analysis that tracks data
 across call boundaries — the class of analysis that CodeQL and Semgrep Pro are known for.
 
-#### 29.1 Semgrep Pro Taint Mode Integration
+#### 33.1 Semgrep Pro Taint Mode Integration
 
 - [ ] Upgrade semgrep invocation to use `--config=p/default` and explicitly add taint rules:
   - `--config=p/sql-injection` (taint: user input → SQL query builder)
@@ -2736,7 +2996,7 @@ across call boundaries — the class of analysis that CodeQL and Semgrep Pro are
 - [ ] Parse `taint_trace` field from semgrep JSON output when present; add to `Finding.TaintTrace []TraceStep`
 - [ ] Display taint trace in the TUI detail view and HTML report: "Source → [3 intermediate steps] → Sink"
 
-#### 29.2 Go Race Condition Detection
+#### 33.2 Go Race Condition Detection
 
 - [ ] Integrate `go test -race ./...` as an optional scan step (requires test suite present):
   - Run with `-count=1 -timeout 120s`; parse race detector output
@@ -2744,7 +3004,7 @@ across call boundaries — the class of analysis that CodeQL and Semgrep Pro are
 - [ ] Integrate `golangci-lint` with `govet` (includes `-copylocks`, `-loopclosure` analyzers)
 - [ ] **Go deadcode** integration: extend `godeadcode` to flag unreachable exported functions separately
 
-#### 29.3 Integer & Arithmetic Safety
+#### 33.3 Integer & Arithmetic Safety
 
 - [ ] Semgrep rules for integer overflow patterns:
   - `int(float64)` conversions without bounds checking
@@ -2753,7 +3013,7 @@ across call boundaries — the class of analysis that CodeQL and Semgrep Pro are
 - [ ] For C/C++: cppcheck `--enable=warning` covers integer overflows
 - [ ] For Rust: clippy `clippy::arithmetic-side-effects` lint integration
 
-#### 29.4 Type Confusion & Unsafe Deserialization
+#### 33.4 Type Confusion & Unsafe Deserialization
 
 - [ ] Semgrep rules for unsafe deserialization:
   - Python: `pickle.loads(user_input)`, `yaml.load()` without Loader
@@ -2764,9 +3024,9 @@ across call boundaries — the class of analysis that CodeQL and Semgrep Pro are
 
 ---
 
-### Sprint 30 — API Security Analysis
+### Sprint 34 — API Security Analysis
 
-#### 30.1 OpenAPI / Swagger Spec Security Analysis
+#### 34.1 OpenAPI / Swagger Spec Security Analysis
 
 - [ ] Detect OpenAPI specs: `openapi.yaml`, `openapi.json`, `swagger.yaml`, `swagger.json`, `api-docs.json`
 - [ ] Implement `internal/tools/openapi.go` — parse spec and run security checks:
@@ -2779,7 +3039,7 @@ across call boundaries — the class of analysis that CodeQL and Semgrep Pro are
   - [ ] Deprecated API versions still listed without deprecation notice header
 - [ ] Use `go-openapi/loads` library to parse spec; implement checks as functions
 
-#### 30.2 GraphQL Schema Security Analysis
+#### 34.2 GraphQL Schema Security Analysis
 
 - [ ] Detect GraphQL schemas: `schema.graphql`, `*.graphql`, `schema.gql`
 - [ ] Implement `internal/tools/graphql.go` — parse schema and run security checks:
@@ -2790,7 +3050,7 @@ across call boundaries — the class of analysis that CodeQL and Semgrep Pro are
   - [ ] Batch query support without rate limiting (N+1 / DoS risk)
 - [ ] Use `github.com/vektah/gqlparser/v2` to parse GraphQL schema
 
-#### 30.3 JWT Implementation Analysis
+#### 34.3 JWT Implementation Analysis
 
 - [ ] Detect JWT usage patterns across all supported languages:
   - Go: `github.com/golang-jwt/jwt`, `github.com/dgrijalva/jwt-go`
@@ -2804,7 +3064,7 @@ across call boundaries — the class of analysis that CodeQL and Semgrep Pro are
   - `RS256` keys with bit length < 2048
 - [ ] Implement as a semgrep rule pack in `configs/semgrep/jwt-security.yaml`
 
-#### 30.4 OAuth 2.0 & OIDC Misconfiguration
+#### 34.4 OAuth 2.0 & OIDC Misconfiguration
 
 - [ ] Detect OAuth client implementations and check for:
   - Missing PKCE (`code_challenge` parameter) in public clients
@@ -2815,12 +3075,12 @@ across call boundaries — the class of analysis that CodeQL and Semgrep Pro are
 
 ---
 
-### Sprint 31 — Compliance Framework Mapping
+### Sprint 35 — Compliance Framework Mapping
 
 Map every finding to every relevant compliance control so security teams can generate compliance evidence
 directly from scan results.
 
-#### 31.1 OWASP Top 10 (2021)
+#### 35.1 OWASP Top 10 (2021)
 
 - [ ] Build complete OWASP Top 10 2021 mapping table in `internal/compliance/owasp_top10.go`:
   - A01 Broken Access Control → findings from: semgrep auth rules, gosec G401+, checkov IAM rules
@@ -2836,13 +3096,13 @@ directly from scan results.
 - [ ] Add `Finding.OWASP2021` field (e.g., `"A03:2021"`)
 - [ ] `armur report owasp --task <id>` — generate OWASP Top 10 compliance report showing coverage per category
 
-#### 31.2 CWE Top 25 (2024)
+#### 35.2 CWE Top 25 (2024)
 
 - [ ] Build CWE Top 25 2024 mapping in `internal/compliance/cwe_top25.go`
 - [ ] Map all tool rule IDs to CWE IDs (most tools already emit CWEs — collect and normalize)
 - [ ] `armur report cwe --task <id>` — print CWE Top 25 coverage matrix
 
-#### 31.3 PCI-DSS v4.0
+#### 35.3 PCI-DSS v4.0
 
 - [ ] Build PCI-DSS requirement → finding category mapping:
   - Req 6.2 (bespoke software security): all SAST findings
@@ -2852,7 +3112,7 @@ directly from scan results.
   - Req 10 (log and monitor): logging/monitoring gap findings
 - [ ] `armur report pci --task <id>` — PCI-DSS compliance gap report with remediation guidance
 
-#### 31.4 HIPAA Technical Safeguards
+#### 35.4 HIPAA Technical Safeguards
 
 - [ ] Map findings to HIPAA §164.312 technical safeguard requirements:
   - §164.312(a)(2)(iv) Encryption and Decryption → crypto findings
@@ -2861,7 +3121,7 @@ directly from scan results.
   - §164.312(e)(2)(ii) Encryption in transit → TLS/HTTPS misconfiguration findings
 - [ ] `armur report hipaa --task <id>` — HIPAA technical safeguard gap report
 
-#### 31.5 NIST SP 800-53 & SOC 2
+#### 35.5 NIST SP 800-53 & SOC 2
 
 - [ ] Build NIST SP 800-53 Rev 5 control → finding mapping for the most relevant controls (SA-11, SI-3, SC-28, IA-5, etc.)
 - [ ] Build SOC 2 Trust Service Criteria → finding mapping (CC6.1, CC6.6, CC6.8, CC7.1, CC8.1)
@@ -2869,9 +3129,9 @@ directly from scan results.
 
 ---
 
-### Sprint 32 — SBOM Generation & License Compliance
+### Sprint 36 — SBOM Generation & License Compliance
 
-#### 32.1 SBOM Generation (CycloneDX + SPDX)
+#### 36.1 SBOM Generation (CycloneDX + SPDX)
 
 - [ ] **CycloneDX** SBOM generation for all supported ecosystems:
   - Use `cdxgen` (CycloneDX Generator — supports 20+ ecosystems):
@@ -2886,7 +3146,7 @@ directly from scan results.
 - [ ] NTIA Minimum Elements compliance check: verify SBOM contains all required NTIA fields; report gaps
 - [ ] **Dependency-Track** export: `armur sbom upload --dt-url <url> --project-id <id>` — push SBOM to a Dependency-Track instance
 
-#### 32.2 License Detection & Compliance
+#### 36.2 License Detection & Compliance
 
 - [ ] **licensee** integration (GitHub's license detection tool — identifies SPDX license IDs)
   - Run: `licensee detect <dir> --json`; extract license expressions per file/package
@@ -2913,9 +3173,9 @@ directly from scan results.
 
 ---
 
-### Sprint 33 — Supply Chain Security
+### Sprint 37 — Supply Chain Security
 
-#### 33.1 Dependency Confusion Detection
+#### 37.1 Dependency Confusion Detection
 
 Dependency confusion attacks substitute a private package with a malicious public one by registering
 the private package name on the public registry with a higher version number.
@@ -2928,14 +3188,14 @@ the private package name on the public registry with a higher version number.
 - [ ] If found with a higher version on public registry: flag as `CRITICAL` dependency confusion risk
 - [ ] Recommend mitigation: use `--registry` flags, npm `.npmrc` scope-to-registry mappings, or Artifactory
 
-#### 33.2 Typosquatting Detection
+#### 37.2 Typosquatting Detection
 
 - [ ] Maintain a list of top-1000 most-downloaded packages per ecosystem (npm, PyPI, RubyGems, crates.io)
 - [ ] For each dependency in the scanned manifest: compute Levenshtein distance against the top-1000 list
 - [ ] If distance == 1 and the package is not in the top-1000: flag as potential typosquat (severity: MEDIUM)
 - [ ] False positive reduction: only flag packages with <1,000 total downloads or <1 year old on the registry
 
-#### 33.3 Dependency Version Pinning Analysis
+#### 37.3 Dependency Version Pinning Analysis
 
 - [ ] Analyze lockfiles and manifests for version constraint security:
   - Flag semver ranges (`^1.0.0`, `~1.0.0`, `>=1.0.0`) as `INFO` — prefer exact pins for reproducibility
@@ -2943,14 +3203,14 @@ the private package name on the public registry with a higher version number.
   - Flag missing lockfile: manifest has dependencies but no lockfile in the repo
 - [ ] **Renovate / Dependabot config detection**: check if automated dependency update tooling is configured; if not, flag as `INFO`
 
-#### 33.4 Package Provenance & Signing
+#### 37.4 Package Provenance & Signing
 
 - [ ] **npm provenance** check: for npm packages, verify `provenance` attestation via npm CLI (`npm audit signatures`)
 - [ ] **Sigstore/cosign** verification for Go modules: use `cosign verify-blob` for signed modules
 - [ ] **PyPI Trusted Publishers** check: verify if critical PyPI packages use Trusted Publisher attestations
 - [ ] Flag packages published from unverified sources as `INFO` findings
 
-#### 33.5 Abandoned & Unmaintained Package Detection
+#### 37.5 Abandoned & Unmaintained Package Detection
 
 - [ ] For each dependency: query the package registry API for:
   - Last release date (flag if > 2 years with no release)
@@ -2960,69 +3220,999 @@ the private package name on the public registry with a higher version number.
 
 ---
 
-## Phase 6: Enterprise (v4.0) — Sprints 34–39
+### Sprint 38 — Language Expansion: Tier 1 (Java · Kotlin · C# · Rust)
 
-Team features, scale, governance, threat intelligence, multi-tenant API, and LLM security.
+These four languages represent the highest-demand enterprise environments. Each gets SAST, SCA,
+and quality analysis coverage using the best-in-class open source tools for that ecosystem.
+
+#### 38.1 Java & Kotlin
+
+- [ ] **SpotBugs** integration (static bytecode analysis, 400+ bug patterns)
+  - Run: `spotbugs -textui -xml:withMessages -output results.xml <classes-dir>`
+  - Parse XML output; map to `Finding.Category` by bug pattern category (SECURITY, CORRECTNESS, etc.)
+  - Require a pre-compiled `.class` directory or run Maven/Gradle compile step first
+- [ ] **PMD** integration (code quality, 300+ rules including security)
+  - Run: `pmd check -d <src> -R rulesets/java/quickstart.xml -f json`
+  - Parse `violations` array; map `rule` to `RuleID`, `priority` to `Severity`
+- [ ] **OWASP Dependency-Check** (SCA for Maven/Gradle/Ivy)
+  - Run: `dependency-check.sh --scan <dir> --format JSON --out <outdir>`
+  - Parse `vulnerabilities` in each `dependency`; map CVE IDs and CVSS scores to `Finding`
+- [ ] **Error Prone** integration (Google's compile-time bug checker for Java)
+  - Invoke via Gradle/Maven plugin; parse annotation-processor diagnostic output
+- [ ] **semgrep** Java rules — already runs on auto config; add explicit `--config=p/java` and `--config=p/kotlin`
+- [ ] Language detection: add `.java`, `.kt`, `.kts`, `pom.xml`, `build.gradle`, `build.gradle.kts` to language detector
+- [ ] Add `testdata/java/` and `testdata/kotlin/` with known-vulnerable sample files
+- [ ] Document Java/Kotlin support in README with setup instructions (JDK version requirement)
+
+#### 38.2 C# and .NET
+
+- [ ] **Security Code Scan** integration (Roslyn-based SAST for C#/VB.NET)
+  - Run as a dotnet tool: `dotnet-scs --project <csproj> --export-sarif-file results.sarif`
+  - Parse SARIF output using the shared SARIF parser (from Sprint 3.1)
+- [ ] **Puma Scan** Community Edition integration (OWASP-mapped C# security scanner)
+  - Run: `puma-scan -solution <sln> -j results.json`
+- [ ] **dotnet-retire** integration (detect retired/vulnerable NuGet packages)
+  - Run: `retire --js --path <dir> --outputformat json`
+  - Map CVE IDs to SCA findings
+- [ ] **Semgrep** C# rules: add `--config=p/csharp` to the semgrep invocation for .NET repos
+- [ ] **Roslynator CLI** integration (200+ Roslyn analyzers for code quality)
+  - Run: `roslynator analyze <sln> --output results.xml`
+- [ ] Language detection: add `.cs`, `.vb`, `.csproj`, `.sln`, `*.nuspec`, `packages.config`, `packages.lock.json`
+- [ ] Add `testdata/csharp/` with known-vulnerable C# sample files
+- [ ] NuGet SCA: parse `packages.config` and `<PackageReference>` in `.csproj` files; query OSV/NVD for CVEs
+
+#### 38.3 Rust
+
+- [ ] **cargo-audit** integration (official Rust advisory database SCA)
+  - Run: `cargo audit --json`; parse `vulnerabilities.list` array
+  - Map advisory IDs (RUSTSEC-*), CVSS scores, and patched versions to `Finding`
+- [ ] **cargo-deny** integration (license compliance + SCA + bans for Rust)
+  - Run: `cargo deny check --format json`
+  - Parse `deny`, `advisories`, `licenses` sections
+  - Emit license findings to a new `license_violation` category
+- [ ] **cargo-geiger** integration (unsafe code detection)
+  - Run: `cargo geiger --output-format Json`
+  - Map `unsafe` counts per crate to findings with severity proportional to count
+- [ ] **Clippy** integration (official Rust linter with security-relevant lints)
+  - Run: `cargo clippy --message-format json -- -W clippy::all`
+  - Parse JSON diagnostic stream; map `lint` names containing "security"/"correctness" to relevant categories
+- [ ] **Semgrep** Rust rules: add `--config=p/rust` to semgrep invocation for Rust repos
+- [ ] Language detection: add `.rs`, `Cargo.toml`, `Cargo.lock`
+- [ ] Add `testdata/rust/` with known-vulnerable Rust sample files (unsafe blocks, outdated deps)
 
 ---
 
-### Sprint 34 — Team & Organization Features
+### Sprint 39 — Language Expansion: Tier 2 (PHP · Ruby · Swift · Shell)
 
-#### 34.1 Multi-User API with RBAC
+#### 39.1 PHP
 
-- [ ] Add user model to the server: `User { ID, Email, Role, APIKey, CreatedAt }`
-- [ ] Roles: `admin` (full access), `editor` (run scans, manage findings), `viewer` (read-only)
-- [ ] Admin API endpoints: `POST /api/v1/admin/users`, `DELETE /api/v1/admin/users/:id`, `PATCH /api/v1/admin/users/:id/role`
-- [ ] API keys scoped to users: each user has their own API key for CLI authentication
-- [ ] Findings are tagged with the user who submitted the scan
+- [ ] **PHPCS + Security Sniffs** integration
+  - Run: `phpcs --standard=Security --report=json <dir>`
+  - Parse `files` map; map each `message` to a finding
+- [ ] **Psalm** integration (static analysis for PHP, security-focused mode)
+  - Run: `psalm --output-format=json --taint-analysis <dir>`
+  - Parse `issues` array; taint-analysis results map to `security_issues` category
+- [ ] **PHP Security Checker** (symfony/security-checker or local-php-security-checker)
+  - Run: `local-php-security-checker --format=json`
+  - Parses `composer.lock`; maps CVE advisories to SCA findings
+- [ ] **Exakat** integration (PHP static analyzer with security rules)
+  - Run: `exakat project -p myproject -r <dir> -format json`
+- [ ] Language detection: add `.php`, `composer.json`, `composer.lock`
+- [ ] Add `testdata/php/` with SQL injection, eval injection, file include vulnerability samples
 
-#### 34.2 Finding Assignment & Workflow
+#### 39.2 Ruby
 
-- [ ] Add `PATCH /api/v1/findings/:id` endpoint:
-  - `assignee_email` — assign to a team member
-  - `status` — `open` | `in_progress` | `resolved` | `suppressed` | `accepted_risk`
-  - `comment` — free text note
-- [ ] `armur finding assign <id> --to user@example.com` CLI command
-- [ ] `armur finding status <id> --set resolved` CLI command
-- [ ] Webhook notification when a finding is assigned
+- [ ] **Brakeman** integration (Rails security scanner — best-in-class for Ruby web apps)
+  - Run: `brakeman -o /dev/stdout -f json <dir>`
+  - Parse `warnings` array; map `warning_type` to `RuleID`, `confidence` to `Severity`
+  - Map to OWASP categories using Brakeman's built-in OWASP tags
+- [ ] **bundler-audit** integration (SCA for RubyGems)
+  - Run: `bundle-audit check --json`
+  - Parse advisory list; map to SCA findings with CVE IDs and patched versions
+- [ ] **RuboCop** with security rules (`rubocop-rails-security`, `rubocop-ast` security cops)
+  - Run: `rubocop --format json --only Security <dir>`
+  - Parse `offenses` in each `file`
+- [ ] Language detection: add `.rb`, `Gemfile`, `Gemfile.lock`, `Rakefile`, `.gemspec`
+- [ ] Add `testdata/ruby/` with known-vulnerable Rails patterns (mass assignment, CSRF, open redirect)
 
-#### 34.3 Finding Suppression Management
+#### 39.3 Swift
 
-- [ ] Inline suppression in source code: `// armur:ignore <rule-id> -- reason -- until:2026-12-31`
-- [ ] Global suppression via `.armur.yml`:
-  ```yaml
-  suppress:
-    - rule: "gosec.G401"
-      path: "internal/crypto/legacy.go"
-      reason: "Legacy code, scheduled for removal in Q2 2026"
-      expires: "2026-06-01"
-      approved-by: "jane@example.com"
+- [ ] **SwiftLint** with security rules integration
+  - Run: `swiftlint lint --reporter json <dir>`
+  - Parse violations; filter for security-relevant rule identifiers
+- [ ] **Periphery** integration (dead code detection for Swift/Xcode projects)
+  - Run: `periphery scan --format json`
+  - Map unused declarations to `dead_code` category
+- [ ] **semgrep** Swift rules: add `--config=p/swift` for Swift repos
+- [ ] Language detection: add `.swift`, `Package.swift`, `Package.resolved`, `.xcodeproj/`
+- [ ] Add `testdata/swift/` with insecure data storage, missing encryption samples
+
+#### 39.4 Shell / Bash / PowerShell
+
+- [ ] **ShellCheck** integration (shell script static analysis — covers bash, sh, dash, ksh)
+  - Run: `shellcheck --format=json <file>`
+  - Parse `comments` array; map `level` (error/warning/info/style) to `Severity`
+  - Detect shell files by shebang (`#!/bin/bash`, `#!/bin/sh`) and `.sh`, `.bash` extensions
+- [ ] **bashate** integration (style and error checking for bash scripts)
+  - Run: `bashate --max-line-length 120 <file>` — parse stdout for violations
+- [ ] **PSScriptAnalyzer** integration (PowerShell security linter)
+  - Run: `pwsh -Command "Invoke-ScriptAnalyzer -Path <dir> -Recurse -OutputFormat Json"`
+  - Parse JSON; map `RuleName` patterns containing "Security" or "Injection" to findings
+- [ ] Detect `.ps1`, `.psm1`, `.psd1` as PowerShell; `.sh`, `.bash`, `.zsh` as Shell
+- [ ] Add `testdata/shell/` with command injection, eval misuse, insecure temp file patterns
+
+---
+
+### Sprint 40 — Language Expansion: Tier 3 (Scala · Elixir · Dart · Go Extras)
+
+#### 40.1 Scala
+
+- [ ] **Scalafix** integration (refactoring and linting framework for Scala)
+  - Run: `scalafix --rules=DisableSyntax,LeakingImplicitClassVal <dir>`
+  - Parse diagnostic output
+- [ ] **WartRemover** integration (flexible Scala code linting)
+  - Invoke as sbt plugin; parse warning output for security-relevant warts
+- [ ] **semgrep** Scala rules: add `--config=p/scala`
+- [ ] Language detection: add `.scala`, `build.sbt`, `project/build.properties`
+
+#### 40.2 Elixir
+
+- [ ] **Sobelow** integration (security-focused analysis for Phoenix Framework apps)
+  - Run: `sobelow --format json --skip <dir>`
+  - Parse `findings` array; map `type` to `RuleID`, `confidence` to `Severity`
+- [ ] **Credo** integration (code consistency and quality for Elixir)
+  - Run: `mix credo --format json`
+  - Parse `issues`; filter for security-relevant checks (e.g., `Credo.Check.Warning.UnsafeExec`)
+- [ ] Language detection: add `.ex`, `.exs`, `mix.exs`, `mix.lock`
+- [ ] Add `testdata/elixir/` with SQL injection and command injection Phoenix samples
+
+#### 40.3 Dart / Flutter
+
+- [ ] **dart analyze** integration (official Dart static analysis)
+  - Run: `dart analyze --format=machine <dir>`
+  - Parse machine-readable output; map `ERROR`/`WARNING`/`INFO` to severity
+- [ ] **dependency_validator** integration (unused/missing Dart dependencies)
+  - Run: `dart run dependency_validator`
+- [ ] **pubspec_lock_checker** — parse `pubspec.lock`; query OSV for vulnerable pub packages
+- [ ] Language detection: add `.dart`, `pubspec.yaml`, `pubspec.lock`
+
+#### 40.4 Additional Go Analysis Tools
+
+- [ ] **govulncheck** integration (official Go vulnerability database, Go team at Google)
+  - Run: `govulncheck -json ./...`
+  - Parse `finding` entries with `osv_id` and `trace`; map to SCA findings
+  - Govulncheck does call graph analysis — only flags vulnerabilities that are actually *reachable* in the code (massive false positive reduction vs. osv-scanner)
+- [ ] **errcheck** integration (checks for unchecked errors in Go)
+  - Run: `errcheck -json ./...`
+  - Map to `antipatterns_bugs` category with HIGH severity (unchecked errors = common security bug source)
+- [ ] **ineffassign** integration (detect ineffectual assignments)
+  - Run: `ineffassign ./...`
+  - Map to `dead_code` category
+- [ ] **shadow** (`go vet -shadow`) integration — detect shadowed variables
+
+---
+
+### Sprint 41 — IaC Deep: Cloud Providers (Terraform · CloudFormation · CDK · Pulumi · Bicep)
+
+#### 41.1 Terraform
+
+- [ ] **tfsec** integration (purpose-built Terraform security scanner)
+  - Run: `tfsec <dir> --format json`
+  - Parse `results`; map `severity`, `rule_id`, provider (aws/azure/gcp/kubernetes) to findings
+  - Map tfsec rule IDs to CWE/NIST control IDs where available
+- [ ] **Checkov** Terraform rules (already have Checkov; add `--framework terraform` explicitly)
+  - Ensure Checkov is invoked with `--framework terraform` for `.tf` directories
+- [ ] **terrascan** integration (multi-cloud IaC scanner)
+  - Run: `terrascan scan -i terraform -d <dir> -o json`
+  - Parse `results.violations`; use as cross-validation with tfsec
+- [ ] **infracost** integration (cloud cost policy violations — catch misconfigured expensive resources)
+  - Run: `infracost breakdown --path <dir> --format json`
+  - Map resources exceeding policy thresholds to a new `cost_risk` finding category
+- [ ] Terraform language detection: `.tf`, `.tfvars`, `terraform.lock.hcl`, `*.tf.json`
+- [ ] Add `testdata/terraform/` with S3 bucket public access, unencrypted RDS, wide security groups
+
+#### 41.2 AWS CloudFormation
+
+- [ ] **cfn-lint** integration (official AWS CloudFormation linter)
+  - Run: `cfn-lint <template> --format json`
+  - Parse `matches`; map `rule.id`, `rule.severity` to findings
+- [ ] **cfn-nag** integration (CloudFormation security linter with 80+ rules)
+  - Run: `cfn_nag_scan --input-path <template> --output-format json`
+  - Parse `failure_count` and `violations`; map `id` and `message` to findings
+- [ ] **Checkov** CloudFormation: add `--framework cloudformation` for YAML/JSON templates
+- [ ] CloudFormation detection: `*.template`, `*.template.yaml`, `*.template.json`, `cloudformation/` directories
+
+#### 41.3 AWS CDK
+
+- [ ] **cdk-nag** integration (security and compliance checks for AWS CDK constructs)
+  - Invoke via CDK App synthesis; parse `cdk.out/` for cdk-nag warning annotations
+  - Run: `cdk synth 2>&1 | parse cdk-nag annotations`
+- [ ] CDK detection: `cdk.json`, `cdk.out/`, TypeScript/Python CDK app patterns
+
+#### 41.4 Pulumi
+
+- [ ] **Checkov** Pulumi: add `--framework pulumi` for Pulumi YAML programs
+- [ ] **pulumi-policy** integration: run against Pulumi CrossGuard policy packs
+- [ ] Pulumi detection: `Pulumi.yaml`, `Pulumi.<stack>.yaml`
+
+#### 41.5 Azure ARM Templates & Bicep
+
+- [ ] **arm-ttk** integration (official Azure Resource Manager template test toolkit)
+  - Run: `Test-AzTemplate -TemplatePath <dir>` via PowerShell; parse JSON output
+- [ ] **PSRule.Rules.Azure** integration (comprehensive Azure security benchmark rules)
+  - Run: `Invoke-PSRule -InputPath <dir> -Module PSRule.Rules.Azure -OutputFormat Json`
+  - Parse rule failures; map to finding with CIS Azure Benchmark control IDs
+- [ ] **Checkov** ARM: add `--framework arm` for ARM template JSON files
+- [ ] Azure detection: `azuredeploy.json`, `*.parameters.json`, `*.bicep`, `.bicepparam`
+
+#### 41.6 GCP Deployment Manager & Config Connector
+
+- [ ] **Checkov** GCP support: add `--framework googledeploymentmanager`
+- [ ] Detect GCP Deployment Manager templates: `*.jinja`, `*.jinja.schema`, `config.yaml`
+- [ ] Detect Config Connector YAML files (kind: SQLInstance, StorageBucket, etc.)
+
+---
+
+### Sprint 42 — IaC Deep: Kubernetes, Containers & Configuration Management
+
+#### 42.1 Kubernetes Manifests
+
+- [ ] **kube-linter** integration (StackRox/RedHat — focuses on security and correctness)
+  - Run: `kube-linter lint <dir> --format json`
+  - Parse `Reports`; map `Check`, `Diagnostic.Message` to findings with Kubernetes context
+- [ ] **kube-score** integration (structured scoring of Kubernetes workloads)
+  - Run: `kube-score score <manifests> -o json`
+  - Parse `object_meta` + `checks`; map failing checks to findings
+- [ ] **kubesec** integration (risk score for Kubernetes resources)
+  - Run: `kubesec scan <file>` — parse `scoring.advise` and `scoring.critical` arrays
+- [ ] **Polaris** integration (Fairwinds governance for Kubernetes — 40+ checks)
+  - Run: `polaris audit --audit-path <dir> --format json`
+  - Parse `Results`; map `category` to finding category
+- [ ] **Checkov** Kubernetes: add `--framework kubernetes` for YAML with Kubernetes markers
+- [ ] Kubernetes detection: YAML files containing `apiVersion:` + `kind:` patterns; `k8s/`, `manifests/`, `deploy/` directories
+
+#### 42.2 Helm Charts
+
+- [ ] **helm lint** integration (official Helm linter)
+  - Run: `helm lint <chart-dir> --strict`; parse stderr warnings to findings
+- [ ] **Checkov** Helm: add `--framework helm` for Helm chart directories (`Chart.yaml` present)
+- [ ] **nova** integration (find outdated Helm chart versions and deprecated APIs)
+  - Run: `nova find --format json`; map outdated charts to `sca` findings
+- [ ] Helm detection: `Chart.yaml`, `values.yaml`, `templates/*.yaml` directory structure
+
+#### 42.3 Docker Compose
+
+- [ ] **Checkov** Docker Compose: add `--framework docker_compose` for `docker-compose.yml` files
+- [ ] Custom checks: privileged containers, host network mode, writable root filesystem, missing health checks
+- [ ] Detection: `docker-compose.yml`, `docker-compose.yaml`, `compose.yml`, `compose.yaml`
+
+#### 42.4 Ansible
+
+- [ ] **ansible-lint** integration (best-practice enforcement and security rules for Ansible)
+  - Run: `ansible-lint <playbook> --format pep8 -R` — parse output for violations
+  - Add `--profile=security` to focus on security-relevant rules
+- [ ] **ansible-later** integration (additional Ansible review standards)
+- [ ] Detection: `.yml` files containing `hosts:`, `tasks:`, `roles:` patterns; `playbooks/` directory
+
+#### 42.5 Puppet & Chef
+
+- [ ] **puppet-lint** with security rules:
+  - Run: `puppet-lint --log-format "%{path}:%{line}:%{kind}:%{message}" <dir>`
+- [ ] **cookstyle** (Chef Infra cookbook linter, RuboCop-based):
+  - Run: `cookstyle --format json <cookbook-dir>`
+- [ ] Detection: `.pp` files for Puppet; `metadata.rb`, `recipes/` for Chef
+
+#### 42.6 Hadolint (Dockerfile)
+
+- [ ] **hadolint** integration (Dockerfile linter — best Dockerfile security tool available)
+  - Run: `hadolint --format json <Dockerfile>`
+  - Parse array of violations; map `code` (DL/SC rule IDs) and `level` to findings
+  - DL codes are Dockerfile-specific; SC codes are ShellCheck from RUN commands
+  - Map relevant rule IDs to CIS Docker Benchmark controls
+- [ ] Multi-stage Dockerfile support: analyze each stage independently
+- [ ] Detection: `Dockerfile`, `Dockerfile.*`, `*.dockerfile`
+- [ ] Add `testdata/docker/` with: running as root, COPY --chown missing, ADD from URL, secrets in ENV
+
+---
+
+### Sprint 43 — Container Image Security
+
+Beyond scanning the *source code* of containers, Armur should also scan *built images* and running containers.
+
+#### 43.1 Docker Image Vulnerability Scanning
+
+- [ ] **Trivy image** mode integration (already have `trivy fs` — add `trivy image`)
+  - Run: `trivy image --format json <image:tag>`
+  - Scan: OS packages, language packages, misconfigurations, secrets in layers
+  - Parse `Results` from image scan; merge with filesystem scan results
+- [ ] **Grype** integration (Anchore's vulnerability scanner — excellent accuracy, fast)
+  - Run: `grype <image:tag> -o json`
+  - Parse `matches`; map `vulnerability.id`, `vulnerability.severity`, `relatedVulnerabilities` to findings
+  - Grype cross-references NVD + GitHub Advisory + OSV + RHSA + DSA databases
+- [ ] Image scanning mode: `armur run --image <image:tag>` triggers image scan pipeline
+- [ ] Parse `PURL` (Package URL) from Grype output for standardized package identification
+- [ ] Map `FixedInVersion` to remediation hint: "Upgrade to <package>@<fixed-version>"
+
+#### 43.2 Image Layer Analysis
+
+- [ ] Layer-by-layer secret detection: use `docker save <image> | tar -x` and scan each layer's filesystem tar for secrets
+- [ ] Detect secrets that were `ADD`ed and then `rm`-ed (they persist in lower layers)
+- [ ] Build history analysis: `docker history --no-trunc <image>` — flag ENV instructions with credential patterns
+- [ ] Large layer detection: flag layers > 100MB (bloat indicator) as informational findings
+
+#### 43.3 Base Image Security Assessment
+
+- [ ] EOL/EOS base image detection: maintain a list of EOL dates for common base images (ubuntu:18.04, debian:buster, centos:7, etc.)
+- [ ] Known-CVE count for base image: query Trivy/Grype for the base image's vulnerability count before application packages
+- [ ] Recommend alternatives: if `ubuntu:22.04` has N CVEs, suggest `ubuntu:22.04-minimal` or `debian:bookworm-slim`
+- [ ] Distroless recommendation: flag full OS base images when a distroless equivalent exists (`gcr.io/distroless/static`)
+- [ ] CIS Docker Benchmark checks: privileged ports, user namespace, AppArmor/seccomp profiles
+
+#### 43.4 SBOM Extraction from Images
+
+- [ ] **Trivy SBOM** mode: `trivy image --format cyclonedx <image:tag>` — extract CycloneDX SBOM from image
+- [ ] **Syft** integration (Anchore's SBOM generator — best-in-class for images)
+  - Run: `syft <image:tag> -o cyclonedx-json`
+  - Parse SBOM; cross-reference with Grype for vulnerability enrichment
+- [ ] Store extracted SBOMs alongside scan results in `~/.armur/sboms/<task-id>.cdx.json`
+
+---
+
+## Phase 6: Advanced Capabilities (v3.5) — Sprints 44–55
+
+Observability, streaming architecture, rules marketplace, fuzzing, privacy, cryptographic health,
+binary security, threat modeling, dependency automation, and security test generation.
+
+---
+
+### Sprint 44 — Observability & Operations
+
+#### 44.1 Prometheus Metrics
+- [ ] Add `/metrics` endpoint exposing Prometheus metrics
+- [ ] Track: scan duration histogram (per tool and total)
+- [ ] Track: queue depth (pending tasks)
+- [ ] Track: error rate per tool
+- [ ] Track: active worker count
+- [ ] Track: total scans completed/failed
+- [ ] Add Grafana dashboard JSON to `docs/grafana/`
+
+#### 44.2 Health Check Endpoint
+- [ ] Add `GET /health` endpoint
+  - [ ] Check Redis connectivity
+  - [ ] Check worker availability
+  - [ ] Return structured JSON: `{ "status": "ok", "redis": "ok", "workers": 3 }`
+- [ ] Add `GET /ready` endpoint for Kubernetes readiness probes
+
+#### 44.3 OpenTelemetry Tracing
+- [ ] Add OpenTelemetry instrumentation to the scan pipeline
+- [ ] Trace spans for: API request → task enqueue → worker pickup → each tool → result store
+- [ ] Export to OTLP (compatible with Jaeger, Tempo, Datadog, etc.)
+- [ ] Add `OTEL_EXPORTER_OTLP_ENDPOINT` env var support
+
+---
+
+### Sprint 45 — Streaming Architecture (Server-Side Events)
+
+To power the live TUI dashboard, the server must push real-time per-tool progress events
+to the CLI as the scan executes rather than waiting until everything is done.
+
+#### 45.1 Server-Sent Events (SSE) Endpoint
+
+- [ ] Add `GET /api/v1/scan/stream/:task_id` SSE endpoint to the Gin router (`internal/api/routes.go`)
+- [ ] Define the event schema (newline-delimited JSON in SSE `data:` field):
+  ```json
+  { "event": "tool_started",    "tool": "gosec",  "ts": 1700000001 }
+  { "event": "tool_progress",   "tool": "gosec",  "pct": 42, "ts": 1700000003 }
+  { "event": "tool_completed",  "tool": "gosec",  "findings": 3, "duration_ms": 4200 }
+  { "event": "tool_failed",     "tool": "gosec",  "error": "exit status 1" }
+  { "event": "tool_skipped",    "tool": "golint", "reason": "binary not found in PATH" }
+  { "event": "scan_completed",  "total_findings": 17, "duration_ms": 103000 }
   ```
-- [ ] `armur suppress <finding-id>` interactive CLI: prompts for reason, expiry, approver
-- [ ] Suppression audit trail: log who suppressed what, when, with what reason
-- [ ] Expired suppressions automatically reactivate the finding on next scan
-- [ ] `armur suppressions list` — show all active suppressions with expiry dates
+- [ ] Worker writes events to a per-task buffered channel stored in a registry (`sync.Map`)
+- [ ] SSE handler reads from that channel and writes `data: <json>\n\n` to the response stream
+- [ ] Set correct SSE headers: `Content-Type: text/event-stream`, `Cache-Control: no-cache`, `X-Accel-Buffering: no`
+- [ ] Handle client disconnect (context cancellation) by closing the read loop gracefully
+- [ ] Store the last 50 events per task in Redis so late-connecting clients can replay missed events
+- [ ] Add 30-second keepalive comment (`: ping\n\n`) to prevent proxy timeouts
 
-#### 34.4 SSO Integration
+#### 45.2 Worker Progress Instrumentation
 
-- [ ] OIDC provider support (Google, GitHub, Okta, Auth0):
-  - Config: `ARMUR_OIDC_ISSUER`, `ARMUR_OIDC_CLIENT_ID`, `ARMUR_OIDC_CLIENT_SECRET`
-  - Exchange OIDC ID token for Armur API key on first login
-- [ ] SAML 2.0 IdP integration for enterprise (Okta SAML, Azure AD SAML)
-- [ ] `armur login --oidc` CLI command: opens browser for OIDC flow, stores token in `~/.armur/credentials`
+- [ ] Define `ProgressReporter` interface in `internal/tasks/progress.go`:
+  ```go
+  type ProgressReporter interface {
+      Started(tool string)
+      Progress(tool string, pct int)
+      Completed(tool string, findingCount int, d time.Duration)
+      Failed(tool string, err error)
+      Skipped(tool string, reason string)
+  }
+  ```
+- [ ] Implement `ChannelReporter` that sends events to the per-task channel
+- [ ] Thread `ProgressReporter` into `RunSimpleScan`, `RunAdvancedScans`, and every tool wrapper
+- [ ] Call `Started` immediately before `exec.Command`, `Completed`/`Failed` immediately after
+- [ ] For tools that print progress to stdout (semgrep JSON streaming, trivy), parse their output line-by-line and emit `Progress` events with estimated `pct` based on lines processed
+- [ ] Emit `Skipped` when a tool binary is not found in PATH (currently silently errors)
 
-#### 34.5 Organization-Level Audit Log
+#### 45.3 CLI SSE Client
 
-- [ ] Every scan submission, finding suppression, user creation, and role change creates an audit log entry
-- [ ] `GET /api/v1/admin/audit-log` endpoint (admin-only): paginated audit log
-- [ ] `armur audit-log --since 2026-01-01` CLI command to query the log
-- [ ] Audit log entries include: timestamp, actor (user ID + email), action, resource ID, IP address
+- [ ] Implement `cli/internal/sse/client.go`:
+  - `Connect(url, taskID string) (<-chan Event, error)` — opens SSE connection, returns event channel
+  - Parses `data:` lines, unmarshals JSON into `Event` struct
+  - Sends events to a channel that the Bubbletea program reads via `tea.Program.Send()`
+- [ ] Run SSE client in a goroutine spawned when the TUI dashboard starts
+- [ ] Implement reconnect with exponential backoff: retry after 1s, 2s, 4s, then fall back to 2s polling
+- [ ] On `scan_completed` event: send a `ScanDoneMsg` to Bubbletea to trigger transition to ResultsBrowser
+- [ ] On connection failure: show "⚠ Live updates unavailable — polling every 2s" in the dashboard footer
 
 ---
 
-### Sprint 35 — Performance at Scale (Monorepos, Caching, Distributed Scanning)
+### Sprint 46 — API & Protocol Improvements
 
-#### 35.1 Monorepo Support
+#### 46.1 Typed API Response Model
+
+Replace all `map[string]interface{}` response bodies with concrete Go structs so the API is
+self-documenting, testable, and generates accurate OpenAPI schemas.
+
+- [ ] Define typed structs in `internal/api/types.go`:
+  - `ScanSubmitResponse { TaskID string; QueuedAt time.Time }`
+  - `ScanStatusResponse { TaskID, Status string; StartedAt, FinishedAt *time.Time; Findings []Finding; Errors []ScanError; Meta ScanMeta }`
+  - `ScanMeta { Language, Mode string; ToolsRun []string; Duration time.Duration; DedupStats DedupStats }`
+- [ ] Update all handler functions to use these types (eliminates all `map[string]interface{}` in handlers)
+- [ ] Add response validation in handler tests
+- [ ] Regenerate OpenAPI spec from struct tags
+
+#### 46.2 Batch Scanning API
+
+- [ ] `POST /api/v1/scan/batch` — accepts `[{ "repo_url": "...", "language": "go", "mode": "quick" }, ...]`
+- [ ] Enqueues each as an independent Asynq task; returns `{ "batch_id": "...", "task_ids": ["...", "..."] }`
+- [ ] `GET /api/v1/scan/batch/:batch_id` — returns aggregated status: how many done/pending/failed, merged finding totals
+- [ ] CLI: `armur run --batch repos.txt` — reads newline-delimited repo URLs, submits as a batch, shows per-repo progress in a list view in the TUI
+
+#### 46.3 Webhook Notifications
+
+- [ ] Add `webhook_url` + `webhook_secret` optional fields to the scan request body
+- [ ] On task completion: POST the full `ScanStatusResponse` JSON to `webhook_url`
+- [ ] Sign the payload: `X-Armur-Signature: sha256=<hmac-sha256(webhook_secret, body)>`
+- [ ] Retry logic: 3 attempts, exponential backoff (1s → 4s → 16s), then give up and log
+- [ ] Log each delivery attempt outcome (success/failure/timeout) in the structured logger
+
+#### 46.4 Request Correlation IDs
+
+- [ ] Add `X-Request-ID` Gin middleware: if header is absent, generate a UUID v4; if present, use caller's value
+- [ ] Include `request_id` in every log entry within that request's lifecycle
+- [ ] Return `X-Request-ID` in every response header
+- [ ] Store `request_id` in Asynq task metadata so it flows through to worker log entries
+
+---
+
+### Sprint 47 — Rules Marketplace & Customization
+
+#### 47.1 Community Rules Registry
+
+- [ ] Create `github.com/armur-ai/armur-rules` repository — official community rules repo
+- [ ] Structure: `rules/<language>/<category>/<rule-name>.yaml` (Semgrep rule format)
+- [ ] Rules index at `rules/index.json`: `{ "packs": [{ "name": "go-security", "version": "1.2.0", "rules": 24, "languages": ["go"] }] }`
+- [ ] Automated PR-based contribution workflow with CI testing
+
+#### 47.2 `armur rules` CLI Subcommands
+
+- [ ] `armur rules list` — browse available rule packs from the registry (paginated table output)
+- [ ] `armur rules search <keyword>` — search rules by keyword, language, or CWE
+- [ ] `armur rules install <pack-name>` — download and install a rule pack to `~/.armur/rules/<pack-name>/`
+- [ ] `armur rules update` — update all installed rule packs to latest versions
+- [ ] `armur rules remove <pack-name>` — uninstall a rule pack
+- [ ] `.armur.yml` integration:
+  ```yaml
+  rules:
+    community:
+      - go-security@1.2.0
+      - python-owasp@2.0.1
+    local:
+      - ./my-custom-rules/
+  ```
+
+#### 47.3 Custom Rule Authoring Tools
+
+- [ ] `armur rules create` — interactive wizard to scaffold a new Semgrep rule:
+  - Ask: target language, vulnerability category, example vulnerable code snippet
+  - Generate a starter `.yaml` rule file with the correct Semgrep schema
+- [ ] `armur rules test <rule-file>` — test a custom rule against `testdata/` fixtures:
+  - Run semgrep with the rule against good and bad code samples
+  - Report: true positives, false positives, false negatives
+- [ ] `armur rules validate <rule-file>` — validate rule YAML schema and check for common mistakes
+
+#### 47.4 Import Rules from External Sources
+
+- [ ] `armur rules import --from semgrep-registry <rule-id>` — fetch and adapt a Semgrep registry rule
+- [ ] `armur rules import --from snyk <vuln-id>` — convert a Snyk rule template to Armur format
+- [ ] Rule versioning: each installed rule pack has a version; `armur rules update` shows changelog
+
+---
+
+### Sprint 48 — Fuzzing Integration (Go · Python · JavaScript)
+
+Static analysis finds known patterns. Fuzzing finds unknown crashes, panics, and logic bugs that no
+rule ever catches. All three integrations use the same tool-wrapper pattern — exec.Command + output
+parsing — with no novel infrastructure required.
+
+#### 48.1 Go Native Fuzzing
+
+- [ ] Implement `internal/tools/gofuzz.go`
+- [ ] Detect fuzz-able functions: scan the repo for functions whose first arg is `*testing.F`; if none
+  exist, scan for exported functions that accept `[]byte`, `string`, or `io.Reader` and auto-generate
+  a stub fuzz harness in a temp directory
+- [ ] Run: `go test -fuzz=Fuzz -fuzztime=60s ./...` (timeout configurable via `.armur.yml: fuzzing.timeout`)
+- [ ] Parse panic output and crash artifacts from `testdata/fuzz/` — map each crash to a `Finding`
+  with `Category = "crash"` and `Severity = CRITICAL`
+- [ ] Save corpus to `~/.armur/fuzzing/<task-id>/corpus/` for replay
+- [ ] Add `--fuzz` flag to `armur run` to append the fuzzing phase after static analysis
+
+#### 48.2 Python Fuzzing (Atheris)
+
+- [ ] Implement `internal/tools/atheris.go`
+- [ ] Run: `python -m atheris -runs=10000 fuzz_target.py` where `fuzz_target.py` is either an
+  existing harness found in the repo or a generated one for detected entry functions
+- [ ] Parse uncaught exceptions from stderr → map to findings
+- [ ] Require `atheris` pip package; emit `armur doctor` warning if missing
+
+#### 48.3 JavaScript Fuzzing (jsfuzz)
+
+- [ ] Implement `internal/tools/jsfuzz.go`
+- [ ] Run: `jsfuzz fuzz_target.js --runs 5000`
+- [ ] Parse crash output → findings
+- [ ] Require `jsfuzz` npm package; emit `armur doctor` warning if missing
+
+#### 48.4 `armur fuzz` CLI Command
+
+- [ ] `armur fuzz <target>` — dedicated fuzz command (runs all available fuzzers for the detected language)
+- [ ] `armur fuzz replay <crash-file>` — reproduce a specific crash
+- [ ] Display per-fuzzer status in the TUI dashboard using the same `ProgressReporter` interface
+- [ ] `.armur.yml` fuzzing configuration:
+  ```yaml
+  fuzzing:
+    timeout: 60         # per-fuzzer run time in seconds
+    corpus-dir: .armur/corpus   # seed corpus location
+    max-crashes: 10     # stop after N crashes to avoid noise
+  ```
+
+---
+
+### Sprint 49 — Privacy & PII Compliance (GDPR · CCPA · LGPD)
+
+All checks are pure Go pattern matching, ORM model parsing, and compliance mapping tables.
+No external tools required — same implementation approach as the existing CWE/OWASP mapping logic.
+
+#### 49.1 PII Pattern Detection in Source Code
+
+- [ ] Implement `internal/tools/piidetect.go` — scan all source files with regex patterns for:
+  - Email addresses in string literals and log statements
+  - SSN / national ID patterns (US, UK, EU formats)
+  - Credit card numbers (pass Luhn check on matched strings)
+  - Phone numbers (E.164 + common local formats)
+  - Date of birth patterns in variable names and string literals
+  - Passport / driver's licence patterns
+  - GPS coordinates
+- [ ] Flag PII found in: `log.Printf/Println` args, SQL query strings, HTTP response structs, test fixtures
+- [ ] New finding category: `pii_exposure`
+- [ ] Add `testdata/pii/` with deliberately leaky code samples per language
+
+#### 49.2 Database Schema PII Column Detection
+
+- [ ] Parse ORM model files:
+  - Go: GORM struct field names (`json:"email"`, `gorm:"column:ssn"`)
+  - Python: Django model field names, SQLAlchemy column names
+  - JavaScript/TypeScript: TypeORM, Sequelize, Mongoose schema keys
+- [ ] Flag column names matching PII patterns: `email`, `phone`, `ssn`, `dob`, `passport`, `address`,
+  `credit_card`, `ip_address`, `geolocation`
+- [ ] Check for missing field-level encryption decorators on PII columns (e.g., missing `encrypted:true`)
+- [ ] Finding message: `"PII column 'email' in User model is stored without encryption annotation"`
+
+#### 49.3 API Response PII Leak Detection
+
+- [ ] Use the OpenAPI parser (Sprint 34.1) to scan response schemas for PII field names
+- [ ] Flag response objects that return raw PII without masking (e.g., `ssn` returned in full)
+- [ ] Flag API response examples in OpenAPI docs that contain real-looking PII values (regex match)
+- [ ] Detect PII in GraphQL type definitions (Sprint 34.2 prerequisite)
+
+#### 49.4 Compliance Mapping & Reports
+
+- [ ] Build `internal/compliance/gdpr.go` — GDPR Article → finding category mapping:
+  - Art. 25 Data minimization → flag unnecessary PII collection patterns
+  - Art. 32 Security of processing → forward to crypto/auth findings
+  - Art. 17 Right to erasure → detect hard-delete vs soft-delete patterns where erasure is required
+- [ ] Build `internal/compliance/ccpa.go` — CCPA mapping:
+  - Right to Know → flag missing data inventory comments/annotations
+  - Right to Delete → same erasure detection as GDPR Art. 17
+- [ ] `armur report gdpr --task <id>` — GDPR gap report: list of PII findings mapped to Articles
+- [ ] `armur report ccpa --task <id>` — CCPA compliance report
+- [ ] Add `Finding.PrivacyRegulation []string` field (e.g., `["GDPR-Art25", "CCPA-1798.100"]`)
+
+#### 49.5 Consent & Retention Pattern Checks
+
+- [ ] Detect missing consent collection patterns in web frameworks:
+  - Flask/FastAPI: no consent middleware in route decorators for PII-collecting endpoints
+  - Express: no consent cookie check before PII processing
+- [ ] Flag hardcoded retention periods that may exceed legal maximums
+  (e.g., `retentionDays := 3650` — 10 years is likely excessive for most PII types)
+- [ ] `.armur.yml` PII configuration:
+  ```yaml
+  privacy:
+    pii-detection: true
+    regulations: [gdpr, ccpa]
+    allowlist:
+      - path: "testdata/**"   # ignore test fixtures
+      - pattern: "example@example.com"  # obviously fake
+  ```
+
+---
+
+### Sprint 50 — Cryptographic Health & Post-Quantum Readiness
+
+All checks use Go's `crypto/x509` stdlib for certificate parsing, regex on config files for TLS
+settings, and new Semgrep rules for algorithm detection. Zero new infrastructure required.
+
+#### 50.1 TLS Configuration File Analysis
+
+- [ ] Implement `internal/tools/tlsconfig.go`
+- [ ] Parse the following config files for TLS directives using regex (no full config parser needed):
+  - `nginx.conf`, `nginx/*.conf`: `ssl_protocols`, `ssl_ciphers`, `ssl_session_timeout`,
+    `add_header Strict-Transport-Security`
+  - `apache2.conf`, `httpd.conf`, `*.conf`: `SSLProtocol`, `SSLCipherSuite`, `Header always set HSTS`
+  - `haproxy.cfg`: `ssl-min-ver`, `ciphers`
+  - `.env`, `config.yml`, `config.json`: any key containing `TLS_VERSION`, `SSL_PROTOCOLS`
+- [ ] Findings:
+  - `ssl_protocols TLSv1` or `TLSv1.1` present → HIGH
+  - `SSLv2` or `SSLv3` present → CRITICAL
+  - Weak ciphers (`RC4`, `3DES`, `NULL`, `EXPORT`, `DES`) → HIGH
+  - Missing `Strict-Transport-Security` header → MEDIUM
+  - Missing perfect forward secrecy ciphers (`ECDHE`, `DHE`) → MEDIUM
+- [ ] New finding category: `crypto_config`
+
+#### 50.2 Cryptographic Algorithm Strength (Source Code)
+
+- [ ] Add new Semgrep rules in `configs/semgrep/crypto-strength.yaml`:
+  - RSA key generation with `bits < 2048` in Go, Python, Java, JavaScript
+  - ECDSA with curves weaker than P-256 (`secp192r1`, `secp160r1`)
+  - MD5 or SHA-1 used in signature contexts (not just hashing)
+  - ECB mode block cipher usage in any language
+  - Deterministic ECDSA without RFC 6979 (`k` value hardcoded or derived insecurely)
+  - DH key exchange with group size < 2048 bits
+- [ ] Extend existing `gosec` and `bandit` coverage to catch the above gaps
+- [ ] Map all findings to relevant CWE: CWE-326 (Inadequate Encryption Strength), CWE-327 (Broken Algorithm)
+
+#### 50.3 Certificate File Analysis
+
+- [ ] Implement `internal/tools/certcheck.go`
+- [ ] Walk repo for `*.pem`, `*.crt`, `*.cer`, `*.der` files
+- [ ] Parse each with Go's `crypto/x509` stdlib: no external library needed
+- [ ] Check and flag:
+  - Key length < 2048 bits (RSA) or weak curve (ECDSA) → HIGH
+  - SHA-1 signature algorithm → HIGH
+  - MD5 signature algorithm → CRITICAL
+  - Certificate expiring in < 30 days → HIGH; < 7 days → CRITICAL
+  - Self-signed certificate in a non-test path → MEDIUM
+- [ ] `armur certs <target>` CLI command: certificate inventory table
+- [ ] Export to `~/.armur/reports/<task-id>.certs.json`
+
+#### 50.4 Post-Quantum Algorithm Detection
+
+- [ ] Add Semgrep rules to flag quantum-vulnerable algorithm usage with `INFO` severity:
+  - RSA key exchange or signature (any key size — quantum-vulnerable regardless of bits)
+  - ECDH / ECDSA usage
+  - Classic DH key exchange
+- [ ] Finding message includes migration guidance:
+  - Key exchange: "Consider migrating to CRYSTALS-Kyber (ML-KEM, NIST FIPS 203)"
+  - Signatures: "Consider migrating to CRYSTALS-Dilithium (ML-DSA, NIST FIPS 204) or SPHINCS+"
+- [ ] `armur crypto <target>` dedicated command: runs all crypto checks and outputs a crypto health report
+- [ ] `.armur.yml` crypto configuration:
+  ```yaml
+  crypto:
+    min-rsa-bits: 2048
+    min-ec-curve: P-256
+    flag-quantum-vulnerable: true   # INFO-level findings for PQC migration
+    check-cert-expiry: true
+  ```
+
+---
+
+### Sprint 51 — Binary & Compiled Artifact Security
+
+All integrations follow the standard tool-wrapper pattern. `checksec` is a widely available tool;
+Go binary metadata extraction uses the standard `go` binary already on the PATH.
+
+#### 51.1 Binary Hardening Analysis (checksec)
+
+- [ ] Implement `internal/tools/checksec.go`
+- [ ] Walk repo for compiled binaries: ELF files (`*.elf`, `bin/`, `dist/`, files with ELF magic bytes),
+  PE files (`*.exe`, `*.dll`), Mach-O files (macOS `*.dylib`, files in `bin/`)
+- [ ] Run: `checksec --file=<binary> --format=json`
+- [ ] Parse and flag missing mitigations:
+  - NX (No-Execute) not set → HIGH
+  - PIE/ASLR not enabled → MEDIUM
+  - Stack canary missing → MEDIUM
+  - RELRO partial (not full) → LOW
+  - Debug symbols not stripped → INFO (production binaries should be stripped)
+  - FORTIFY_SOURCE not enabled (for C/C++ binaries) → MEDIUM
+- [ ] New finding category: `binary_hardening`
+- [ ] `armur scan --binary <path>` scan mode — scan a single binary file
+
+#### 51.2 Hardcoded String Analysis in Binaries
+
+- [ ] Implement Go equivalent of `strings`: scan binary file bytes for printable ASCII sequences ≥ 8 chars
+- [ ] Apply secrets regex patterns (from Sprint 32) to extracted strings
+- [ ] Detect API keys, connection strings, private key PEM headers embedded in compiled artifacts
+- [ ] Flag: `"PRIVATE KEY"` PEM header found in binary → CRITICAL; AWS/GCP/Azure key patterns → CRITICAL
+- [ ] Rate-limit to top 50 high-entropy matches per binary to avoid noise
+
+#### 51.3 Go Binary Dependency Extraction
+
+- [ ] Run: `go version -m <binary>` — extracts embedded Go module list from any Go binary
+- [ ] Parse module list; submit to OSV API for vulnerability lookup
+- [ ] Flag vulnerable embedded modules the same as source-level SCA findings
+- [ ] Useful for auditing third-party Go binaries you receive or vendor into your repo
+
+#### 51.4 SBOM from Compiled Artifacts
+
+- [ ] Add `--binary` mode to `armur sbom` command: `armur sbom --binary <path>`
+- [ ] Use Syft binary mode: `syft <binary> -o cyclonedx-json`
+- [ ] Merge binary-extracted SBOM with source-level SBOM; flag components that appear in the binary
+  but are not declared in any manifest (potential dependency confusion or hidden dependency)
+- [ ] Output: `~/.armur/sboms/<task-id>.binary.cdx.json`
+
+---
+
+### Sprint 52 — Threat Modeling from Code
+
+Route detection uses Semgrep patterns against the top 5 frameworks — exactly the same mechanism
+as existing SAST rules. Mermaid output is pure string generation. No novel infrastructure.
+
+#### 52.1 HTTP Route Detection via Semgrep
+
+- [ ] Add Semgrep rule pack `configs/semgrep/routes/` with rules for each major framework:
+  - Go (Gin): `router.GET`, `router.POST`, `r.Group`, `v1.Use` (middleware detection)
+  - Go (Echo, Chi): equivalent route registration patterns
+  - Python (Flask): `@app.route`, `@blueprint.route` decorators
+  - Python (FastAPI): `@router.get`, `@router.post`, `@app.include_router`
+  - JavaScript (Express): `app.get(`, `router.post(`, `app.use(`
+- [ ] Each matched route emits: HTTP method, path pattern, handler function name, file + line
+- [ ] Collect all routes into `internal/analysis/routes.go` as `[]RouteDefinition`
+
+#### 52.2 DFD Generation (Mermaid.js)
+
+- [ ] Build `internal/analysis/threatmodel.go`:
+  - Parse detected routes into nodes
+  - Detect external service calls (HTTP clients, gRPC clients, DB calls) using Semgrep patterns
+  - Detect middleware (auth, rate limiting, logging) from framework-specific patterns
+  - Detect data stores (DB connection patterns, Redis, S3 client init)
+- [ ] Generate Mermaid.js diagram from the collected nodes and edges:
+  ```
+  graph LR
+    Internet --> AuthMiddleware
+    AuthMiddleware --> POST_/api/users
+    POST_/api/users --> UsersDB[(PostgreSQL)]
+    POST_/api/users --> EmailService[SendGrid]
+  ```
+- [ ] Output: `~/.armur/reports/<task-id>.threat-model.md` (Mermaid fenced code block)
+- [ ] `armur threatmodel <target>` dedicated command
+
+#### 52.3 STRIDE Analysis per Component
+
+- [ ] For each detected entry point, run a STRIDE check:
+  - **Spoofing**: is auth middleware present before this route?
+  - **Tampering**: is input validation present (validator, binding)?
+  - **Repudiation**: is request logging middleware present?
+  - **Information Disclosure**: does the response include error details in production mode?
+  - **DoS**: is rate limiting middleware present?
+  - **Elevation of Privilege**: is authorization (role check) performed after authentication?
+- [ ] Each failing STRIDE check becomes a finding: `Category = "threat_model"`, severity based on the
+  STRIDE category (Spoofing → HIGH, DoS → MEDIUM, Repudiation → LOW, etc.)
+
+#### 52.4 Attack Surface Report
+
+- [ ] `armur attack-surface <target>` command — enumerate and output:
+  - All public endpoints with their HTTP methods and auth status
+  - File upload endpoints (flag separately — high attack surface)
+  - Admin/management endpoints (`/admin`, `/debug`, `/metrics`, `/health`)
+  - WebSocket upgrade endpoints
+  - Unauthenticated endpoints (no auth middleware detected)
+- [ ] Output as a structured table in the terminal and as JSON in the report file
+
+---
+
+### Sprint 53 — Dependency Update Automation (Auto-Fix PRs)
+
+Manifest parsing uses stdlib text manipulation; GitHub/GitLab PR creation uses `net/http` + JSON.
+The `gh` CLI (already used for releases) provides a fallback for GitHub.
+
+#### 53.1 Safe Dependency Bump Engine
+
+- [ ] Implement `internal/depfix/bump.go`
+- [ ] For each SCA finding that has a `patched_version` field: compute the minimal safe version bump
+- [ ] Supported manifest formats (all parsed with Go stdlib + regex, no external parsers):
+  - `go.mod` — use `golang.org/x/mod/modfile` (already in the Go module ecosystem)
+  - `package.json` — stdlib `encoding/json`
+  - `requirements.txt` — line-by-line text; update `package==version` → `package==patched`
+  - `Cargo.toml` — TOML parsing (`pelletier/go-toml` — add dep)
+  - `Gemfile.lock` — text replacement
+  - `pom.xml` — XML parsing with `encoding/xml` stdlib
+  - `pyproject.toml` — TOML parsing
+- [ ] Safety check: only bump within the same major version (semver) unless `--allow-major` flag set
+- [ ] `armur fix-deps --dry-run` — print what would change without writing to disk
+
+#### 53.2 GitHub Pull Request Creation
+
+- [ ] `armur fix-deps --create-pr` — apply bumps, commit with `git`, push to a new branch, create PR
+- [ ] Branch name: `armur/fix-deps-<date>` (e.g., `armur/fix-deps-2026-03-11`)
+- [ ] Commit message: `fix(deps): patch N vulnerabilities (Armur auto-fix)`
+- [ ] PR title: `fix(deps): patch N critical/high vulnerabilities`
+- [ ] PR body template (Markdown table):
+  ```markdown
+  ## Security Dependency Updates (Armur)
+  | Package | From | To | CVE | CVSS | Severity |
+  |---------|------|----|-----|------|----------|
+  | lodash  | 4.17.15 | 4.17.21 | CVE-2021-23337 | 7.2 | HIGH |
+  ```
+- [ ] Use GitHub REST API via `net/http`: `POST /repos/:owner/:repo/pulls`
+- [ ] GitLab: `POST /projects/:id/merge_requests`
+- [ ] API tokens read from `armur config`: `armur config set github-token <token>`
+
+#### 53.3 PR Policy Configuration
+
+- [ ] `.armur.yml` dep-update policy:
+  ```yaml
+  dep-updates:
+    auto-pr: false          # set true to auto-create PRs after each scan
+    group-by: severity      # one PR for all, or one per severity tier
+    max-open-prs: 5         # don't flood the repo
+    skip-major-bumps: true  # only patch/minor version bumps
+    assignees: []           # GitHub usernames to assign
+    labels: ["security", "dependencies"]
+  ```
+- [ ] `armur fix-deps --schedule` — run on embedded cron (cron library already in go.mod: `robfig/cron`)
+
+#### 53.4 Pre-Bump Safety Scan
+
+- [ ] Before creating the PR: run a quick in-process scan of the updated manifest to verify the bumped
+  version does not introduce new vulnerabilities (query OSV API for the new version)
+- [ ] If new vulns found in the bump target: skip that package and add a note to the PR body
+
+---
+
+### Sprint 54 — Network & Protocol Configuration Security
+
+All checks are regex/grep on config files (nginx, Apache, Istio YAML) or YAML parsing using
+`gopkg.in/yaml.v3` which is already in go.mod. No external tools required.
+
+#### 54.1 TLS Configuration in Web Server Files
+
+- [ ] Implement `internal/tools/netconfig.go`
+- [ ] Walk repo for: `nginx.conf`, `nginx/*.conf`, `conf.d/*.conf`, `httpd.conf`, `apache2.conf`,
+  `haproxy.cfg`, `traefik.yml`, `traefik.yaml`, `caddy`/`Caddyfile`
+- [ ] Regex-based checks (no full config parser needed — targeting specific directive lines):
+  - `ssl_protocols` containing `TLSv1` or `TLSv1.1` → HIGH
+  - `SSLProtocol` containing `+TLSv1` or `+TLSv1.1` → HIGH
+  - Cipher string containing `RC4`, `3DES`, `NULL`, `EXPORT`, `DES` → HIGH
+  - No `ssl_session_tickets off` → MEDIUM (session ticket key rotation risk)
+  - No `resolver` configured for OCSP stapling → INFO
+
+#### 54.2 HTTP Security Header Analysis
+
+- [ ] Check web server and application configs for missing security headers:
+  - `add_header X-Frame-Options` missing → MEDIUM
+  - `add_header X-Content-Type-Options nosniff` missing → MEDIUM
+  - `add_header Strict-Transport-Security` missing → HIGH (if TLS is configured)
+  - `add_header Content-Security-Policy` missing → MEDIUM
+  - `add_header Referrer-Policy` missing → LOW
+  - `Content-Security-Policy` value containing `unsafe-eval` or `unsafe-inline` → HIGH
+- [ ] Parse application-level header setting for Go (Gin middleware), Python (Flask/Django middleware),
+  and Express (helmet.js usage) to check in-code header configuration
+
+#### 54.3 Istio / Service Mesh Security
+
+- [ ] Parse Istio resource YAML files using `gopkg.in/yaml.v3` (already in go.mod):
+  - `AuthorizationPolicy` with `action: ALLOW` and no `from` or `to` rules → CRITICAL
+    (allows all traffic)
+  - `PeerAuthentication` with `mtls.mode: DISABLE` or `mtls.mode: PERMISSIVE` → HIGH
+  - `VirtualService` routing to HTTP (not HTTPS) backends → MEDIUM
+- [ ] Detect Istio resources by `apiVersion: security.istio.io/v1` or `networking.istio.io/v1`
+
+#### 54.4 Protobuf / gRPC Security
+
+- [ ] Implement `internal/tools/protocheck.go`
+- [ ] Walk repo for `*.proto` files; parse with line-by-line text analysis (no full proto parser):
+  - Service definitions with no auth comment / option annotation → INFO
+  - Fields named `password`, `secret`, `token`, `api_key` without `(buf.validate.field).string.min_len` → MEDIUM
+  - `stream` RPCs (potential DoS via long-lived connections without timeout options) → LOW
+- [ ] Detect `*.proto` files and add proto language to `armur doctor` tool check list
+
+#### 54.5 Kubernetes Ingress & Network Policy
+
+- [ ] Parse `Ingress` resources: flag HTTP (non-TLS) backends → MEDIUM
+- [ ] Parse `NetworkPolicy` resources: flag absence of NetworkPolicy in a namespace → INFO
+  (any pod can reach any other pod)
+- [ ] Flag `NetworkPolicy` with `podSelector: {}` and no `policyTypes` (matches all pods) → MEDIUM
+- [ ] Detect via `kind: Ingress` / `kind: NetworkPolicy` in YAML files
+
+---
+
+### Sprint 55 — Security Test Generation
+
+Pure Go code generation using `text/template` stdlib. No external tools, no new dependencies.
+The output is test files (.go, .py, .js) generated from templates and written with `os.WriteFile`.
+
+#### 55.1 Failing Test Generation from SAST Findings
+
+- [ ] Implement `internal/testgen/generator.go`
+- [ ] For each finding with a known exploit pattern, generate a test using language-specific templates:
+
+  **SQL Injection (Go):**
+  ```go
+  func TestSQLInjection_<file>_<line>(t *testing.T) {
+      payload := "' OR '1'='1"
+      _, err := handler(payload)
+      if err == nil {
+          t.Fatal("expected error for SQL injection payload, got nil")
+      }
+  }
+  ```
+
+  **XSS (JavaScript/Jest):**
+  ```js
+  test('XSS: <file>:<line> should escape HTML', () => {
+      const payload = '<script>alert(1)</script>';
+      const result = renderFunction(payload);
+      expect(result).not.toContain('<script>');
+  });
+  ```
+
+  **Path Traversal (Python/pytest):**
+  ```python
+  def test_path_traversal_<file>_<line>():
+      response = client.get('/file?path=../../../etc/passwd')
+      assert response.status_code in (400, 403), "path traversal not blocked"
+  ```
+
+- [ ] Templates stored in `internal/testgen/templates/<language>/<category>.tmpl`
+- [ ] `armur generate-tests --task <id> --language go` — output to `.armur/security-tests/`
+
+#### 55.2 PoC Payload Library
+
+- [ ] `internal/testgen/payloads.go` — curated payload lists per vulnerability category:
+  - SQL injection: 20 classic payloads (`' OR 1=1--`, `1; DROP TABLE users--`, etc.)
+  - XSS: 15 payloads (`<img src=x onerror=alert(1)>`, `"><script>`, etc.)
+  - Path traversal: 10 payloads (`../../../etc/passwd`, `..%2F..%2F`, etc.)
+  - Command injection: 10 payloads (`; ls -la`, `| whoami`, `` `id` ``, etc.)
+  - SSRF: internal IP ranges and metadata endpoint URLs
+- [ ] Payloads saved to `~/.armur/reports/<task-id>/poc/<finding-id>.txt` for reference
+- [ ] NOT automatically executed — displayed for manual verification only
+
+#### 55.3 Regression Test Suite Generation
+
+- [ ] `armur generate-tests --regression --task <id>` — generate a security regression suite:
+  - For each finding that was previously present and is now resolved: generate a test that asserts
+    the fix holds (using the PoC payload against the fixed code path)
+  - Tests written to `.armur/security-tests/regression_test.<ext>` in the repo
+- [ ] Include in README a section: "Run `go test ./.armur/security-tests/...` to verify security fixes"
+
+#### 55.4 Fuzz Harness Generation
+
+- [ ] For each function flagged as vulnerable to injection-type findings:
+  - Go: generate a `FuzzXxx(f *testing.F)` harness with the PoC payloads as seed corpus entries
+  - Python: generate an Atheris harness with seed corpus
+- [ ] `armur generate-tests --fuzz --task <id>` — generate fuzz harnesses alongside unit tests
+- [ ] Output to `.armur/security-tests/fuzz_<finding-id>_test.<ext>`
+
+---
+
+## Phase 7: Scale & Intelligence (v4.0) — Sprints 56–59
+
+Performance at scale, security governance, threat intelligence enrichment, and LLM application security.
+
+---
+
+### Sprint 56 — Performance at Scale (Monorepos, Caching, Distributed Scanning)
+
+#### 56.1 Monorepo Support
 
 - [ ] **Service detection**: detect services/modules within a monorepo by finding multiple `go.mod`, `package.json`, `pom.xml`, `pyproject.toml` files
 - [ ] **Per-service scanning**: scan each detected service independently in parallel; merge results with per-service labels
@@ -3030,7 +4220,7 @@ Team features, scale, governance, threat intelligence, multi-tenant API, and LLM
 - [ ] `armur run --service <name>` flag: scan only a specific named service within a monorepo
 - [ ] Result grouping in TUI: top-level tabs by service name; summary card shows per-service severity counts
 
-#### 35.2 Scan Result Caching
+#### 56.2 Scan Result Caching
 
 - [ ] **File-level caching**: compute SHA256 hash of each source file before scanning
   - If a file's hash matches a cache entry (stored in Redis), reuse cached tool results for that file
@@ -3041,7 +4231,7 @@ Team features, scale, governance, threat intelligence, multi-tenant API, and LLM
 - [ ] Cache hit rate reported in scan metadata: `"cache": { "hit_rate": 0.73, "files_from_cache": 147 }`
 - [ ] `armur cache clear` CLI command — flush all cached results
 
-#### 35.3 Distributed Scanning (Multiple Workers)
+#### 56.3 Distributed Scanning (Multiple Workers)
 
 - [ ] Asynq already supports multiple workers — document and test multi-worker deployment
 - [ ] Add worker-aware task distribution: large repos split into sub-tasks (one per tool or one per service) for parallel execution across workers
@@ -3049,7 +4239,7 @@ Team features, scale, governance, threat intelligence, multi-tenant API, and LLM
 - [ ] Priority queues: add `critical`, `default`, `low` Asynq queues; API key tier determines which queue tasks land in
 - [ ] Worker auto-scaling hints: `/metrics` endpoint exposes queue depth; publish Kubernetes HPA custom metrics example
 
-#### 35.4 Large Repo Optimizations
+#### 56.4 Large Repo Optimizations
 
 - [ ] Shallow clone by default: `git clone --depth=1` for repository scans (already fast; make explicit)
 - [ ] Sparse checkout for monorepos: only check out the specific service directory when `--service` is specified
@@ -3057,7 +4247,7 @@ Team features, scale, governance, threat intelligence, multi-tenant API, and LLM
 - [ ] Memory limit for tool execution: set `ulimit -v` (virtual memory cap) per tool subprocess to prevent OOM on oversized repos
 - [ ] Incremental cache warm-up: on first scan, build file hash cache; subsequent scans are 5–10x faster
 
-#### 35.5 Scan Queue Priority & Scheduling
+#### 56.5 Scan Queue Priority & Scheduling
 
 - [ ] `POST /api/v1/scan/repo` accepts optional `priority: critical|high|normal|low` field
 - [ ] Priority maps to Asynq queue: critical → immediately dequeued, low → background
@@ -3067,13 +4257,13 @@ Team features, scale, governance, threat intelligence, multi-tenant API, and LLM
 
 ---
 
-### Sprint 36 — Governance: Verified Fixes, Regression Prevention & SLA Enforcement
+### Sprint 57 — Governance: Verified Fixes, Regression Prevention & SLA Enforcement
 
 Security fixes that silently reappear are a major enterprise pain point. This sprint makes Armur
 into an active security guardian — not just a reporter — by verifying fixes, preventing regressions,
 enforcing remediation timelines, tracking security debt, and managing suppressions.
 
-#### 36.1 Verified Fix Workflow
+#### 57.1 Verified Fix Workflow
 
 When `armur fix --apply <id>` applies a patch, automatically re-scan to confirm the fix worked.
 
@@ -3089,7 +4279,7 @@ When `armur fix --apply <id>` applies a patch, automatically re-scan to confirm 
 - [ ] Add `--verify` flag to `armur fix --apply --verify` to make verification explicit
 - [ ] Verified fixes are marked with `Finding.Status = "verified_fixed"` in the history DB
 
-#### 36.2 Security Regression Detection
+#### 57.2 Security Regression Detection
 
 A regression is when a previously-fixed finding reappears in a new scan.
 
@@ -3102,7 +4292,7 @@ A regression is when a previously-fixed finding reappears in a new scan.
 - [ ] CI integration: `--fail-on-regression` flag — fail the CI build if any previously-fixed finding reappears
 - [ ] `armur compare --regression <task-id>` — show only regressed findings between two scans
 
-#### 36.3 "Never Allow" Rules (Hard Security Gates)
+#### 57.3 "Never Allow" Rules (Hard Security Gates)
 
 Some vulnerabilities must never appear in a codebase — ever. Armur should enforce this as a
 hard gate, distinct from severity thresholds.
@@ -3121,7 +4311,7 @@ hard gate, distinct from severity thresholds.
 - [ ] `armur never-allow add <rule-id>` — add a rule to the never-allow list interactively
 - [ ] Display `never-allow` violations at the top of all results with a `[BLOCKED]` badge
 
-#### 36.4 SLA Tracking & Enforcement
+#### 57.4 SLA Tracking & Enforcement
 
 Security findings have deadlines. Tracking whether teams meet them is essential for compliance.
 
@@ -3143,7 +4333,7 @@ Security findings have deadlines. Tracking whether teams meet them is essential 
 - [ ] SLA compliance rate: `armur sla stats` — "72% of HIGH findings were fixed within SLA in the last 90 days"
 - [ ] Include SLA compliance rate in the executive PDF report
 
-#### 36.5 Composite Risk Score per Finding
+#### 57.5 Composite Risk Score per Finding
 
 - [ ] Add `RiskScore float64` field to the `Finding` struct
 - [ ] Compute in `internal/analysis/risk.go` after all tool results are merged:
@@ -3157,7 +4347,7 @@ Security findings have deadlines. Tracking whether teams meet them is essential 
 - [ ] Asset criticality read from `.armur.yml: asset-criticality: high`
 - [ ] Default sort in TUI results browser changed to `RiskScore DESC` (from raw severity)
 
-#### 36.6 Security Debt Tracker
+#### 57.6 Security Debt Tracker
 
 Security debt is the accumulation of known issues that have been deferred. Quantifying it helps
 teams prioritize and helps management understand risk.
@@ -3169,7 +4359,7 @@ teams prioritize and helps management understand risk.
 - [ ] "Debt payoff planner": given the current team velocity (avg fixes per sprint), estimate how many sprints to reach zero critical debt
 - [ ] Alert when security debt score increases by > 20% in a single week (sudden new vulnerabilities introduced)
 
-#### 36.7 Finding Suppression System
+#### 57.7 Finding Suppression System
 
 - [ ] `armur suppress <finding-id> --reason "false positive" --expires 2026-12-31` command
 - [ ] Store suppressions in SQLite:
@@ -3187,7 +4377,7 @@ teams prioritize and helps management understand risk.
 - [ ] `armur suppressions list` — show all active suppressions with expiry dates
 - [ ] Suppressed findings counted separately in output: `17 findings (3 suppressed, not shown)`
 
-#### 36.8 Executive Posture Report (PDF)
+#### 57.8 Executive Posture Report (PDF)
 
 - [ ] `armur report executive --task <id>` — multi-page PDF using `signintech/gopdf`:
   1. Cover page: target, scan date, posture score (large), grade letter
@@ -3201,9 +4391,9 @@ teams prioritize and helps management understand risk.
 
 ---
 
-### Sprint 37 — Threat Intelligence: OpenSSF Scorecard, CISA KEV, EPSS & SLSA
+### Sprint 58 — Threat Intelligence: OpenSSF Scorecard, CISA KEV, EPSS & SLSA
 
-#### 37.1 OpenSSF Scorecard Integration
+#### 58.1 OpenSSF Scorecard Integration
 
 The OpenSSF Scorecard assesses project-level security hygiene — things no SAST/SCA tool checks:
 branch protection, signed releases, dependency update automation, CI security, etc.
@@ -3227,7 +4417,7 @@ branch protection, signed releases, dependency update automation, CI security, e
 - [ ] Include Scorecard score in the posture score calculation: `final_score = 0.7 x finding_score + 0.3 x scorecard_score`
 - [ ] Also run scorecard against top 10 direct dependencies: "Your dependency X has scorecard score 2/10"
 
-#### 37.2 CISA KEV (Known Exploited Vulnerabilities) Enrichment
+#### 58.2 CISA KEV (Known Exploited Vulnerabilities) Enrichment
 
 The CISA KEV catalog lists CVEs that are being **actively exploited in the wild right now**.
 A KEV match is far more urgent than a theoretical CVE with a high CVSS score.
@@ -3244,7 +4434,7 @@ A KEV match is far more urgent than a theoretical CVE with a high CVSS score.
 - [ ] `armur db update --kev` — force-refresh the KEV catalog immediately
 - [ ] `armur report kev --task <id>` — show only KEV findings with their CISA remediation deadlines
 
-#### 37.3 EPSS (Exploit Prediction Scoring System) Integration
+#### 58.3 EPSS (Exploit Prediction Scoring System) Integration
 
 EPSS is a probability score (0–100%) predicting how likely a CVE is to be exploited in the next 30 days.
 
@@ -3255,14 +4445,14 @@ EPSS is a probability score (0–100%) predicting how likely a CVE is to be expl
 - [ ] Sort SCA findings by EPSS score by default (highest exploitation probability first)
 - [ ] Batch EPSS queries: collect all CVE IDs from the scan, send one HTTP request per batch of 30
 
-#### 37.4 VEX (Vulnerability Exploitability eXchange) Support
+#### 58.4 VEX (Vulnerability Exploitability eXchange) Support
 
 - [ ] Consume VEX documents: if `<project>.openvex.json` exists in the repo root, parse it and mark CVEs with `status: "not_affected"` or `status: "fixed"` as suppressed in SCA results
 - [ ] Generate VEX documents: `armur vex generate --task <id>` — creates `openvex.json` with all SCA findings mapped to OpenVEX statements (status defaults to `"under_investigation"`)
 - [ ] VEX format: OpenVEX (CISA standard — simple JSON, no library needed beyond `encoding/json`)
 - [ ] Store generated VEX documents at `~/.armur/vex/<project-id>.openvex.json`
 
-#### 37.5 SLSA Compliance Checking
+#### 58.5 SLSA Compliance Checking
 
 SLSA (Supply-chain Levels for Software Artifacts) is a framework for supply chain integrity.
 
@@ -3277,7 +4467,7 @@ SLSA (Supply-chain Levels for Software Artifacts) is a framework for supply chai
 - [ ] `armur slsa --repo <url>` — dedicated SLSA assessment command
 - [ ] Include SLSA level in the executive PDF report
 
-#### 37.6 OSS-Fuzz Coverage Check
+#### 58.6 OSS-Fuzz Coverage Check
 
 - [ ] Query GitHub API to check if any direct dependency is an OSS-Fuzz integrated project
 - [ ] Cache the project list in Redis (1-hour TTL)
@@ -3286,74 +4476,12 @@ SLSA (Supply-chain Levels for Software Artifacts) is a framework for supply chai
 
 ---
 
-### Sprint 38 — Multi-Tenant Enterprise API (Org, RBAC, Audit Log)
-
-Built on top of the existing Gin + Redis stack. OIDC via `coreos/go-oidc` (well-established Go library).
-
-#### 38.1 Organization & Project Data Model
-
-- [ ] Extend Redis schema with org and project namespaces:
-  - `org:<org-id>:info` — org metadata (name, created_at, owner)
-  - `org:<org-id>:projects` — set of project IDs
-  - `project:<project-id>:info` — project metadata (name, repo_url, org_id)
-  - `project:<project-id>:scans` — sorted set of scan IDs by timestamp
-- [ ] API endpoints:
-  - `POST /api/v1/orgs` — create org (returns `org_id`)
-  - `GET /api/v1/orgs/:id` — get org info
-  - `POST /api/v1/orgs/:id/projects` — create project
-  - `GET /api/v1/orgs/:id/projects` — list projects
-  - `GET /api/v1/orgs/:id/findings` — aggregate findings across all projects
-  - `GET /api/v1/orgs/:id/posture` — org-wide posture score
-
-#### 38.2 Role-Based Access Control (RBAC)
-
-- [ ] Roles: `org_admin`, `project_admin`, `developer`, `viewer`
-- [ ] Store user roles in Redis: `user:<api-key>:role` → `org_admin`
-- [ ] Add `RBACMiddleware` to Gin: reads API key from `Authorization` header, looks up role, enforces permissions per endpoint
-- [ ] Permission matrix:
-  - `org_admin`: all endpoints
-  - `project_admin`: project scan + findings + suppressions; no user management
-  - `developer`: trigger scans, view findings, create suppressions
-  - `viewer`: GET endpoints only, no scan trigger
-
-#### 38.3 OIDC Single Sign-On
-
-- [ ] Add `coreos/go-oidc` dependency
-- [ ] Config: `ARMUR_OIDC_ISSUER`, `ARMUR_OIDC_CLIENT_ID`, `ARMUR_OIDC_CLIENT_SECRET` env vars
-- [ ] `GET /api/v1/auth/oidc/login` — redirect to IdP (Google, Okta, GitHub, Auth0)
-- [ ] `GET /api/v1/auth/oidc/callback` — exchange code for tokens, create/update user record, return Armur API key
-- [ ] `armur login --oidc` CLI command: open browser for OIDC flow, store API key in `~/.armur/credentials`
-- [ ] Supported IdPs documented: Google, GitHub OAuth App, Okta, Auth0
-
-#### 38.4 Organization-Level Audit Log
-
-- [ ] Store audit log entries in Redis sorted set: `org:<org-id>:audit-log` (scored by timestamp)
-- [ ] Log every state-changing action: scan submitted, finding suppressed, user role changed, project created/deleted
-- [ ] Each entry: `{ ts, actor_id, actor_email, action, resource_type, resource_id, ip_address }`
-- [ ] `GET /api/v1/orgs/:id/audit-log` — paginated audit log (admin-only)
-- [ ] `armur audit-log --since 2026-01-01` CLI command
-
-#### 38.5 Org-Level Aggregate Analytics
-
-- [ ] `armur org posture` CLI command — show org-wide posture score aggregated across all projects
-- [ ] `armur org findings --severity critical` — list all critical findings across all org projects
-- [ ] API: `GET /api/v1/orgs/:id/posture` returns:
-  ```json
-  {
-    "score": 73, "grade": "C",
-    "projects": [{"name": "api-server", "score": 82}, {"name": "frontend", "score": 61}],
-    "total_findings": {"critical": 2, "high": 14, "medium": 31, "low": 58}
-  }
-  ```
-
----
-
-### Sprint 39 — AI/LLM Application Security (OWASP LLM Top 10)
+### Sprint 59 — AI/LLM Application Security (OWASP LLM Top 10)
 
 All checks implemented as Semgrep rule packs + a small Go wrapper. Same implementation pattern
 as all existing SAST tool integrations.
 
-#### 39.1 LLM SDK Detection
+#### 59.1 LLM SDK Detection
 
 - [ ] Implement `internal/tools/llmsecurity.go`
 - [ ] Detect LLM SDK usage by scanning imports:
@@ -3362,7 +4490,7 @@ as all existing SAST tool integrations.
   - JavaScript: `import Anthropic`, `require('openai')`, `from 'langchain'`
 - [ ] If no LLM SDK detected: skip this tool entirely (zero false positives for non-AI codebases)
 
-#### 39.2 Prompt Injection Detection (LLM01)
+#### 59.2 Prompt Injection Detection (LLM01)
 
 - [ ] Semgrep rules in `configs/semgrep/llm-security/prompt-injection.yaml`:
   - Python: f-string or `.format()` with user input variable directly concatenated into a prompt variable that is then passed to an LLM client completion call
@@ -3371,7 +4499,7 @@ as all existing SAST tool integrations.
 - [ ] Taint: source = HTTP request body / query param / form field; sink = LLM completion call argument
 - [ ] Finding message: `"User input directly interpolated into LLM prompt — prompt injection risk (OWASP LLM01)"`
 
-#### 39.3 Insecure Output Handling (LLM02)
+#### 59.3 Insecure Output Handling (LLM02)
 
 - [ ] Semgrep rules in `configs/semgrep/llm-security/output-handling.yaml`:
   - LLM response content passed directly to `eval()` / `exec()` / `subprocess.run()` → CRITICAL
@@ -3379,7 +4507,7 @@ as all existing SAST tool integrations.
   - LLM response used as a SQL query fragment → CRITICAL
   - LLM response written to a filesystem path without sanitization → HIGH
 
-#### 39.4 Excessive Agency Detection (LLM08)
+#### 59.4 Excessive Agency Detection (LLM08)
 
 - [ ] Detect tool/function definitions in agentic LLM code:
   - Python: `tools=[{"name": ..., "function": ...}]` or LangChain `Tool` definitions
@@ -3387,7 +4515,7 @@ as all existing SAST tool integrations.
 - [ ] Flag tool definitions that combine: filesystem write + network access + code execution in a single agent without human-in-the-loop confirmation logic
 - [ ] Flag: database write tools (`INSERT`, `UPDATE`, `DELETE`) with no human approval step
 
-#### 39.5 OWASP LLM Top 10 Mapping & Report
+#### 59.5 OWASP LLM Top 10 Mapping & Report
 
 - [ ] Build `internal/compliance/owasp_llm.go` mapping table:
   - LLM01 Prompt Injection → prompt injection findings
@@ -3405,32 +4533,12 @@ as all existing SAST tool integrations.
 
 Features below are not scheduled. They will be prioritized based on user demand and community feedback.
 
-- **Observability** (old Sprint 6): Prometheus metrics, health checks, OpenTelemetry tracing, Grafana dashboard
-- **SSE Architecture** (old Sprint 9): SSE endpoint for real-time per-tool progress, worker progress instrumentation, CLI SSE client with reconnect
-- **API Improvements** (old Sprint 14): Typed API response structs, batch scanning API, webhook notifications, request correlation IDs
-- **Language Expansion Tier 1** (old Sprint 16): Java/Kotlin (SpotBugs, PMD, OWASP Dep-Check, Error Prone), C#/.NET (Security Code Scan, Puma Scan, dotnet-retire), Rust extras (cargo-deny, cargo-geiger, clippy)
-- **Language Expansion Tier 2** (old Sprint 17): PHP (PHPCS, Psalm, PHP Security Checker), Ruby (Brakeman, bundler-audit, RuboCop), Swift (SwiftLint, Periphery), Shell/Bash/PowerShell (ShellCheck, bashate, PSScriptAnalyzer)
-- **Language Expansion Tier 3** (old Sprint 18): Scala (Scalafix, WartRemover), Elixir (Sobelow, Credo), Dart/Flutter (dart analyze), Go extras (govulncheck, errcheck, ineffassign, shadow)
-- **Web3/Blockchain Deep** (old Sprint 19): Solidity (Slither, Mythril, solhint), Vyper, Move, Cairo, Rust WASM contracts
-- **IaC Cloud Providers** (old Sprint 20): Terraform (tfsec, terrascan, infracost), CloudFormation (cfn-lint, cfn-nag), CDK (cdk-nag), Pulumi, Azure ARM/Bicep, GCP Deployment Manager
-- **IaC Kubernetes & Config Mgmt** (old Sprint 21): kube-linter, kube-score, kubesec, Polaris, Helm, Docker Compose, Ansible, Puppet/Chef, Hadolint
-- **Container Image Security** (old Sprint 22): Trivy image mode, Grype, layer analysis, base image assessment, SBOM extraction from images
-- **Rules Marketplace** (old Sprint 31): Community rules registry, armur rules CLI, custom rule authoring, import from Semgrep/Snyk
-- **Slack/Teams/Issue Trackers** (old Sprint 41): Slack app, Teams connector, Jira auto-create, Linear integration, GitHub Issues, PagerDuty alerting
-- **Security Badges & Social Proof** (old Sprint 42): Dynamic score badge, public scan results page, security leaderboard, README generator
-- **Armur Cloud SaaS** (old Sprint 43): Hosted infrastructure, web dashboard, GitHub/GitLab OAuth, Cloud API, pricing tiers
-- **Community & Growth** (old Sprint 45): armur.ai website, docs site, YouTube, Discord, contributor program, bounty program, "Scan Open Source" program
-- **Mobile Security** (old Sprint 49): MobSF integration, apkleaks, jadx, iOS analysis, certificate pinning checks, OWASP MASVS reporting
-- **Fuzzing** (old Sprint 52): Go native fuzzing, Python (Atheris), JavaScript (jsfuzz), armur fuzz command
-- **Privacy & PII** (old Sprint 53): PII pattern detection, database schema PII, API response PII, GDPR/CCPA compliance mapping
-- **Crypto Health** (old Sprint 54): TLS config analysis, algorithm strength checks, certificate analysis, post-quantum readiness
-- **Binary Security** (old Sprint 55): checksec integration, hardcoded strings in binaries, Go binary dependency extraction, SBOM from binaries
-- **Threat Modeling** (old Sprint 56): HTTP route detection via Semgrep, DFD generation (Mermaid), STRIDE analysis, attack surface report
-- **Gamification** (old Sprint 57): Developer security score (git blame), armur learn lessons, fix streak tracking, challenge mode
-- **Dep Auto-Fix PRs** (old Sprint 58): Safe dependency bump engine, GitHub/GitLab PR creation, PR policy config, pre-bump safety scan
-- **Network/Protocol Config** (old Sprint 60): Web server TLS analysis, HTTP security headers, Istio/service mesh, Protobuf/gRPC, Kubernetes Ingress/NetworkPolicy
-- **Security Test Generation** (old Sprint 61): Failing test generation from findings, PoC payload library, regression test suite, fuzz harness generation
-- **Forensic Mode** (old Sprint 63): Repository history forensics, backdoor pattern detection, unauthorized change detection, malicious install hooks
+- **Web3/Blockchain Deep**: Solidity (Slither, Mythril, solhint), Vyper, Move, Cairo, Rust WASM contracts
+- **Mobile Security**: MobSF integration, apkleaks, jadx, iOS analysis, certificate pinning checks, OWASP MASVS reporting
+- **Developer Security Gamification**: Developer security score (git blame), armur learn lessons, fix streak tracking, challenge mode
+- **Team Features / RBAC / SSO**: Multi-user API with RBAC, finding assignment workflow, suppression management, OIDC/SAML SSO, audit log
+- **Multi-Tenant Enterprise API**: Org/project data model, role-based access control, OIDC single sign-on, org-level audit log and aggregate analytics
+- **Forensic Mode & Compromise Detection**: Repository history forensics, backdoor pattern detection, unauthorized change detection, malicious install hooks
 
 ---
 
