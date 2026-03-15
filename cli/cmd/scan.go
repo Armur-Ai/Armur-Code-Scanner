@@ -17,10 +17,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var scanCmd2 = &cobra.Command{
+var scanInteractiveCmd = &cobra.Command{
 	Use:   "scan-i",
-	Short: "Enter interactive scanning mode",
+	Short: "Enter interactive scanning mode (alias: armur scan --interactive)",
 	Long:  "Launches a terminal UI to configure and start a scan interactively.",
+	Deprecated: "Use 'armur scan --interactive' instead.",
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg, err := config.LoadConfig()
 		if err != nil {
@@ -141,8 +142,16 @@ var scanCmd = &cobra.Command{
 	Short: "Scan a repository or file",
 	Long: `Scan a Git repository (by providing the URL) or a local file/directory (by providing the path)
 for security vulnerabilities using the Armur Code Scanner service.`,
-	Args: cobra.ExactArgs(1),
+	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		interactive, _ := cmd.Flags().GetBool("interactive")
+
+		// If --interactive or no args, launch interactive mode
+		if interactive || len(args) == 0 {
+			scanInteractiveCmd.Run(cmd, args)
+			return
+		}
+
 		cfg, err := config.LoadConfig()
 		if err != nil {
 			color.Red("Error loading configuration: %v", err)
@@ -158,11 +167,19 @@ for security vulnerabilities using the Armur Code Scanner service.`,
 		noServer, _ := cmd.Flags().GetBool("no-server")
 		cfg.API.URL = ensureServer(cfg.API.URL, noServer)
 
-		apiClient := api.NewClient(cfg.API.URL).WithAPIKey(cfg.APIKey)
 		target := args[0]
 		language, _ := cmd.Flags().GetString("language")
 		isAdvanced, _ := cmd.Flags().GetBool("advanced")
 		outputFormat, _ := cmd.Flags().GetString("output")
+
+		// --watch mode
+		watchMode, _ := cmd.Flags().GetBool("watch")
+		if watchMode {
+			runWatchMode(cfg, target, language, isAdvanced, outputFormat)
+			return
+		}
+
+		apiClient := api.NewClient(cfg.API.URL).WithAPIKey(cfg.APIKey)
 
 		if (strings.HasPrefix(target, "http://") || strings.HasPrefix(target, "https://")) && language == "" {
 			color.Red("Error: Language must be specified when scanning a repository. Use --language or -l flag.")
@@ -683,7 +700,7 @@ func truncateString(s string, maxLen int) string {
 
 func init() {
 	rootCmd.AddCommand(scanCmd)
-	rootCmd.AddCommand(scanCmd2)
+	rootCmd.AddCommand(scanInteractiveCmd) // deprecated alias
 	scanCmd.Flags().StringP("language", "l", "", "Specify the programming language")
 	scanCmd.Flags().BoolP("simple", "s", true, "Perform a simple scan")
 	scanCmd.Flags().BoolP("advanced", "a", false, "Perform an advanced scan")
@@ -695,4 +712,6 @@ func init() {
 	scanCmd.Flags().Bool("staged-only", false, "Scan only git-staged files (for pre-commit hooks)")
 	scanCmd.Flags().StringP("format", "f", "text", "Output format (text, json, sarif)")
 	scanCmd.Flags().Bool("no-server", false, "Skip auto-starting the embedded server")
+	scanCmd.Flags().BoolP("interactive", "i", false, "Launch interactive scanning mode")
+	scanCmd.Flags().BoolP("watch", "w", false, "Watch for file changes and re-scan automatically")
 }
