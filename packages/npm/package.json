@@ -1,0 +1,38 @@
+{
+  "name": "@armur/cli",
+  "version": "0.0.1",
+  "description": "Armur — Personal Security Agent. SAST + DAST + exploit simulation + attack path analysis.",
+  "bin": {
+    "armur": "bin/armur.js"
+  },
+  "scripts": {
+    "postinstall": "node scripts/install.js"
+  },
+  "keywords": [
+    "security",
+    "sast",
+    "dast",
+    "scanner",
+    "vulnerability",
+    "devsecops",
+    "exploit",
+    "attack-path",
+    "code-review",
+    "security-agent"
+  ],
+  "author": "Armur AI <hello@armur.ai>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/armur-ai/armur"
+  },
+  "homepage": "https://armur.ai",
+  "bugs": {
+    "url": "https://github.com/armur-ai/armur/issues"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "os": ["darwin", "linux", "win32"],
+  "cpu": ["x64", "arm64"]
+}
