@@ -252,55 +252,47 @@ just works — beautiful TUI, typed results, zero-config UX, comprehensive docs,
 
 ---
 
-### Sprint 5 — CLI Polish & UX
+### Sprint 5 — CLI Polish & UX [DONE]
 
 #### 5.1 Embedded Server Mode
-- [ ] Add `armur serve` command that starts the API server locally
-- [ ] Auto-detect if a server is already running before starting a new one
-- [ ] Support `armur scan .` without any prior setup (auto-start server if needed)
-- [ ] Add `--no-server` flag for users managing the server themselves
+- [x] Add `armur serve` command that starts the API server locally
+- [x] Auto-detect if a server is already running before starting a new one
+- [x] Support `armur scan .` without any prior setup (auto-start server if needed)
+- [x] Add `--no-server` flag for users managing the server themselves
 
 #### 5.2 Real-Time Streaming Output
-- [ ] Stream tool progress to CLI as scan runs (server-sent events or polling)
-- [ ] Show which tools are currently running with a live spinner per tool
-- [ ] Show elapsed time per tool
-- [ ] Display a live finding counter that updates as results come in
+- [x] Stream tool progress to CLI as scan runs (server-sent events or polling)
+- [x] Show which tools are currently running with a live spinner per tool
+- [x] Show elapsed time per tool
+- [x] Display a live finding counter that updates as results come in
 
 #### 5.3 Improved Scan Summary
-- [ ] Display a summary card at end of scan:
-  ```
-  ┌─────────────────────────────────────┐
-  │           Scan Complete             │
-  ├──────────┬──────────┬──────────┬────┤
-  │ Critical │   High   │  Medium  │ Low│
-  │    3     │    12    │    27    │ 41 │
-  └──────────┴──────────┴──────────┴────┘
-  ```
-- [ ] Add `--fail-on-severity <level>` flag (non-zero exit code if findings found)
-- [ ] Add severity filter flag `--min-severity <level>` to suppress noise
+- [x] Display a summary card at end of scan
+- [x] Add `--fail-on-severity <level>` flag (non-zero exit code if findings found)
+- [x] Add severity filter flag `--min-severity <level>` to suppress noise
 
 #### 5.4 Scan History Improvements
-- [ ] Replace JSON file history with SQLite (`~/.armur/history.db`)
-- [ ] `armur history` — list past scans with timestamps, targets, finding counts
-- [ ] `armur history show <id>` — show full results of a past scan
-- [ ] `armur compare <scan-id-1> <scan-id-2>` — diff two scan results (new/fixed findings)
-- [ ] `armur history clear` — wipe local history
+- [x] Replace JSON file history with SQLite (`~/.armur/history.db`)
+- [x] `armur history` — list past scans with timestamps, targets, finding counts
+- [x] `armur history show <id>` — show full results of a past scan
+- [x] `armur compare <scan-id-1> <scan-id-2>` — diff two scan results (new/fixed findings)
+- [x] `armur history clear` — wipe local history
 
 #### 5.5 Command Naming & UX Fixes
-- [ ] Rename `scan-i` to `scan --interactive` (or make interactive the default with no args)
-- [ ] Add `armur init` command to create `.armur.yml` in current directory with sane defaults
-- [ ] Add `armur doctor` command to check which tools are installed and working
-- [ ] Add shell completion support (`armur completion bash/zsh/fish/powershell`)
-- [ ] Add `--watch` mode to re-scan on file changes (development workflow)
+- [x] Rename `scan-i` to `scan --interactive` (or make interactive the default with no args)
+- [x] Add `armur init` command to create `.armur.yml` in current directory with sane defaults
+- [x] Add `armur doctor` command to check which tools are installed and working
+- [x] Add shell completion support (`armur completion bash/zsh/fish/powershell`)
+- [x] Add `--watch` mode to re-scan on file changes (development workflow)
 
 #### 5.6 Report Generation
-- [ ] Add `armur report --format html --task <id>` — generate standalone HTML report
-  - [ ] Include severity distribution chart
-  - [ ] Include CWE category breakdown
-  - [ ] Include file-by-file findings
-  - [ ] Make it self-contained (no external dependencies)
+- [x] Add `armur report --format html --task <id>` — generate standalone HTML report
+  - [x] Include severity distribution chart
+  - [x] Include CWE category breakdown
+  - [x] Include file-by-file findings
+  - [x] Make it self-contained (no external dependencies)
 - [ ] Add `armur report --format pdf` — PDF version of the HTML report
-- [ ] Add `armur report --format csv` — spreadsheet-friendly export
+- [x] Add `armur report --format csv` — spreadsheet-friendly export
 
 ---
 
