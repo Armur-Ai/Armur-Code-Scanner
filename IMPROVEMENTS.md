@@ -1259,7 +1259,7 @@ AI coding assistants. This is what makes Armur fundamentally different from ever
 
 ---
 
-### Sprint 15 — Rebranding: From Code Scanner to Personal Security Agent
+### Sprint 15 — Rebranding [DONE]: From Code Scanner to Personal Security Agent
 
 The fundamental identity shift. Armur is no longer just a "code scanner" — it is a **Personal
 Security Agent for developers** that continuously watches, tests, and protects code. This sprint
@@ -1337,7 +1337,7 @@ that automatically validates every change — not a tool they remember to run ma
 
 ---
 
-### Sprint 16 — AI Intelligence Layer (Claude API + Local LLMs)
+### Sprint 16 — AI Intelligence Layer [DONE] (Claude API + Local LLMs)
 
 Every intelligent feature in Armur (tech stack detection, exploit generation, attack path reasoning,
 PR review, explain, fix, false positive reduction) requires an AI backbone. This sprint builds the
@@ -1498,7 +1498,7 @@ pluggable AI integration layer that supports Claude API, local LLMs via Ollama, 
 
 ---
 
-### Sprint 17 — Sandboxed DAST: Intelligent Runtime Testing
+### Sprint 17 — Sandboxed DAST [DONE]: Intelligent Runtime Testing
 
 Full-blown DAST that goes far beyond "scan a URL." Armur auto-detects the tech stack, creates an
 isolated sandbox, builds and runs the application, waits for it to be healthy, then hammers it
@@ -1632,7 +1632,7 @@ with dynamic security tests. This is the feature that makes Armur a true securit
 
 ---
 
-### Sprint 18 — Exploit Simulation & Proof-of-Concept Engine
+### Sprint 18 — Exploit Simulation [DONE] & Proof-of-Concept Engine
 
 Move beyond "we found a vulnerability" to "here's exactly how an attacker exploits it."
 Armur generates safe, sandboxed exploit proof-of-concepts that confirm SAST findings are real
@@ -1739,7 +1739,7 @@ undeniable evidence.
 
 ---
 
-### Sprint 19 — Attack Path Analysis & Visualization
+### Sprint 19 — Attack Path Analysis [DONE] & Visualization
 
 Individual findings are noise. Attack paths are signal. This sprint connects findings into attack
 graphs that show developers: "An attacker starts here, chains these 3 issues, and ends up with
@@ -1859,7 +1859,7 @@ full database access." This is what converts a vulnerability report into a story
 
 ---
 
-### Sprint 20 — PR Security Agent: Autonomous Code Review
+### Sprint 20 — PR Security Agent [DONE]: Autonomous Code Review
 
 The crown jewel. Armur acts as an autonomous security reviewer on every pull request. It reads
 the diff, runs SAST on the changes, spins up a sandbox for DAST, simulates exploits, maps attack
@@ -1999,7 +1999,7 @@ what "Personal Security Agent" means in practice.
 
 ---
 
-### Sprint 21 — MCP Server: Native AI Assistant Integration
+### Sprint 21 — MCP Server [DONE]: Native AI Assistant Integration
 
 The Model Context Protocol (MCP) is how AI coding assistants (Claude Code, Cursor, Windsurf, Claude
 Desktop) call external tools. Armur as an MCP server means every developer using an AI assistant
