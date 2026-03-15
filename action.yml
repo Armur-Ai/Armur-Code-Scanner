@@ -1,0 +1,76 @@
+name: 'Armur Security Scan'
+description: 'Scan your code for security vulnerabilities with Armur Security Agent'
+author: 'Armur AI'
+
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  path:
+    description: 'Path to scan (default: repository root)'
+    required: false
+    default: '.'
+  depth:
+    description: 'Scan depth: quick or deep'
+    required: false
+    default: 'quick'
+  fail-on-severity:
+    description: 'Fail if findings at this severity or above (critical, high, medium, low)'
+    required: false
+    default: ''
+  min-severity:
+    description: 'Minimum severity to include in output'
+    required: false
+    default: 'medium'
+  output-format:
+    description: 'Output format: sarif, json, or text'
+    required: false
+    default: 'sarif'
+  upload-sarif:
+    description: 'Upload SARIF to GitHub Security tab'
+    required: false
+    default: 'true'
+  comment-on-pr:
+    description: 'Post findings summary as PR comment'
+    required: false
+    default: 'true'
+  armur-version:
+    description: 'Armur CLI version to use (default: latest)'
+    required: false
+    default: 'latest'
+
+outputs:
+  findings-count:
+    description: 'Total number of findings'
+  critical-count:
+    description: 'Number of critical findings'
+  high-count:
+    description: 'Number of high findings'
+  sarif-path:
+    description: 'Path to SARIF output file'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Armur
+      shell: bash
+      run: curl -fsSL https://install.armur.ai | sh
+
+    - name: Run scan
+      shell: bash
+      id: scan
+      run: |
+        armur scan ${{ inputs.path }} \
+          --format ${{ inputs.output-format }} \
+          --min-severity ${{ inputs.min-severity }} \
+          --output armur-results.sarif \
+          ${{ inputs.fail-on-severity != '' && format('--fail-on-severity {0}', inputs.fail-on-severity) || '' }}
+      continue-on-error: true
+
+    - name: Upload SARIF
+      if: inputs.upload-sarif == 'true' && always()
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: armur-results.sarif
+        category: armur-security
