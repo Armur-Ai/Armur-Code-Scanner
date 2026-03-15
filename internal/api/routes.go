@@ -10,6 +10,10 @@ func RegisterRoutes(r *gin.Engine) {
 	// Apply global middleware
 	r.Use(middleware.RequestSizeLimit(middleware.MaxUploadSize))
 
+	// Health endpoints (no auth required)
+	r.GET("/health", HealthCheck)
+	r.GET("/ready", ReadinessCheck)
+
 	api := r.Group("/api/v1")
 	api.Use(middleware.RateLimiter(60, 10)) // 60 req/min, burst of 10
 	api.Use(middleware.APIKeyAuth())

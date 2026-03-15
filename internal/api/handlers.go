@@ -301,6 +301,21 @@ func TaskSans(c *gin.Context) {
 	c.JSON(http.StatusOK, report)
 }
 
+// HealthCheck returns the server health status.
+func HealthCheck(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "ok",
+		"service": "armur-security-agent",
+	})
+}
+
+// ReadinessCheck returns whether the server is ready to accept requests.
+func ReadinessCheck(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"status": "ready",
+	})
+}
+
 // CancelScan cancels an in-progress scan task.
 func CancelScan(c *gin.Context) {
 	taskID := c.Param("task_id")
