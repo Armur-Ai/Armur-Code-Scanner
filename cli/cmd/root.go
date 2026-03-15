@@ -9,8 +9,8 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "armur",
-	Short: "Armur Code Scanner CLI",
-	Long:  `A fast and powerful CLI for interacting with the Armur Code Scanner service.`,
+	Short: "Armur — Your Personal Security Agent",
+	Long:  `Armur is a personal security agent that analyzes your code, runs it in a sandbox, simulates attacks, and shows you exactly how to fix what it finds.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		verbose, _ := cmd.Flags().GetBool("verbose")
 		if verbose {

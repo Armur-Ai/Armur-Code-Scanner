@@ -16,7 +16,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-// @title Armur Code Scanner API
+// @title Armur Security Agent API
 // @version 1.0
 // @description This is a code scanner service API.
 // @termsOfService http://swagger.io/terms/
