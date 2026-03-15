@@ -406,7 +406,7 @@ Each tool uses different severity representations. Normalize all of them to the 
 
 ---
 
-### Sprint 7 — `armur run`: Flagship TUI Command
+### Sprint 7 — `armur run`: Flagship TUI Command [DONE]
 
 The primary user-facing goal: a single entry point that replaces `scan`, `scan-i`, and all manual flags.
 Running `armur run` with no arguments opens a beautiful full-screen TUI that walks the user through
@@ -514,7 +514,7 @@ When the user quits the TUI, print a compact lipgloss-styled summary card to std
 
 ---
 
-### Sprint 8 — Smart Scanning & Zero-Config UX
+### Sprint 8 — Smart Scanning & Zero-Config UX [DONE]
 
 The goal: `armur run` in any project directory just works with no flags or prior setup required.
 
@@ -582,7 +582,7 @@ Full support for a repo-level config that controls scan behavior without any CLI
 
 ---
 
-### Sprint 9 — `armur doctor` & CLI Completeness
+### Sprint 9 — `armur doctor` & CLI Completeness [DONE]
 
 #### 9.1 `armur doctor` Command
 
@@ -681,7 +681,7 @@ Replace the current JSON file history with a SQLite database for reliable queryi
 
 ---
 
-### Sprint 10 — Result Display & Report Generation
+### Sprint 10 — Result Display & Report Generation [DONE]
 
 #### 10.1 Rich Terminal Output (Redesigned Display Layer)
 
@@ -732,7 +732,7 @@ Centralize and redesign.
 
 ---
 
-### Sprint 11 — Embedded Server & Zero-Infrastructure Mode
+### Sprint 11 — Embedded Server & Zero-Infrastructure Mode [DONE]
 
 Currently using `armur` requires Docker, Redis, and a separately running server. For local developer
 use, the CLI should be able to start everything it needs without any external services.
@@ -768,7 +768,7 @@ use, the CLI should be able to start everything it needs without any external se
 
 ---
 
-### Sprint 12 — Community & Open Source Health
+### Sprint 12 — Community & Open Source Health [DONE]
 
 #### 12.1 CI/CD for the Repo Itself
 - [ ] Add `.github/workflows/test.yml` — run `go test ./...` on every PR
