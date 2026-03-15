@@ -381,6 +381,47 @@ func TaskProgress(c *gin.Context) {
 	}
 }
 
+// BatchScan enqueues multiple scan tasks at once.
+func BatchScan(c *gin.Context) {
+	var request BatchScanRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if len(request.Targets) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "at least one target required"})
+		return
+	}
+
+	batchID := fmt.Sprintf("batch-%d", time.Now().UnixNano())
+	var taskIDs []string
+
+	for _, target := range request.Targets {
+		scanType := "SimpleScan"
+		if target.Mode == "advanced" {
+			scanType = "AdvancedScan"
+		}
+
+		repoOrPath := target.RepoURL
+		if repoOrPath == "" {
+			repoOrPath = target.LocalPath
+		}
+
+		taskID, err := tasks.EnqueueScanTask(scanType, repoOrPath, target.Language)
+		if err != nil {
+			continue // Skip failed enqueues, don't fail the batch
+		}
+		taskIDs = append(taskIDs, taskID)
+	}
+
+	c.JSON(http.StatusOK, BatchScanResponse{
+		BatchID: batchID,
+		TaskIDs: taskIDs,
+		Count:   len(taskIDs),
+	})
+}
+
 // ScanLocalHandler godoc
 // @Summary Trigger a code scan on a local repository.
 // @Description Enqueues a scan task for a given local repository path and language.

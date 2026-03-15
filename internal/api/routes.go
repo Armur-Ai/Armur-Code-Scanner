@@ -8,6 +8,7 @@ import (
 
 func RegisterRoutes(r *gin.Engine) {
 	// Apply global middleware
+	r.Use(middleware.CorrelationID())
 	r.Use(middleware.RequestSizeLimit(middleware.MaxUploadSize))
 
 	// Health endpoints (no auth required)
@@ -32,6 +33,9 @@ func RegisterRoutes(r *gin.Engine) {
 
 		// Cancel an in-progress scan
 		api.DELETE("/scan/:task_id", CancelScan)
+
+		// Batch scanning
+		api.POST("/scan/batch", BatchScan)
 
 		// Reports
 		api.GET("/reports/owasp/:task_id", TaskOwasp)
