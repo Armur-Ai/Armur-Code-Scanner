@@ -3,7 +3,9 @@ package cmd
 import (
 	"armur-cli/internal/api"
 	"armur-cli/internal/config"
+	"armur-cli/internal/history"
 	"armur-cli/internal/utils"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -187,6 +189,10 @@ for security vulnerabilities using the Armur Code Scanner service.`,
 
 		scanResult := waitForScan(apiClient, taskID)
 
+		// Save to history
+		counts := countSeverities(scanResult)
+		saveToHistory(taskID, target, language, isAdvanced, scanResult, counts)
+
 		// Apply severity filter
 		minSeverity, _ := cmd.Flags().GetString("min-severity")
 		failOnSeverity, _ := cmd.Flags().GetString("fail-on-severity")
@@ -198,7 +204,6 @@ for security vulnerabilities using the Armur Code Scanner service.`,
 		}
 
 		// Print severity summary card
-		counts := countSeverities(scanResult)
 		printSummaryCard(counts)
 
 		// --fail-on-severity: exit non-zero if findings at or above the threshold exist
@@ -542,6 +547,37 @@ func getSeverityColored(severity string) string {
 	default:
 		return severity
 	}
+}
+
+// saveToHistory persists the scan result to the local SQLite history database.
+func saveToHistory(taskID, target, language string, isAdvanced bool, results map[string]interface{}, counts map[string]int) {
+	db, err := history.Open()
+	if err != nil {
+		return // non-fatal — don't break the scan flow
+	}
+	defer db.Close()
+
+	scanType := "simple"
+	if isAdvanced {
+		scanType = "advanced"
+	}
+
+	resultsJSON, _ := json.Marshal(results)
+
+	db.Save(&history.ScanRecord{
+		TaskID:    taskID,
+		Target:    target,
+		Language:  language,
+		ScanType:  scanType,
+		Status:    "success",
+		Critical:  counts["CRITICAL"],
+		High:      counts["HIGH"],
+		Medium:    counts["MEDIUM"],
+		Low:       counts["LOW"],
+		Info:      counts["INFO"],
+		Results:   string(resultsJSON),
+		CreatedAt: time.Now(),
+	})
 }
 
 // severityLevel returns a numeric severity level for comparison.
