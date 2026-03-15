@@ -296,7 +296,7 @@ just works — beautiful TUI, typed results, zero-config UX, comprehensive docs,
 
 ---
 
-### Sprint 6 — Core Engine Overhaul
+### Sprint 6 — Core Engine Overhaul [DONE]
 
 All language-specific tools read the same directory independently; there is no reason to run them
 sequentially. Parallelizing cuts scan time by 3–5x for a typical Go project.
