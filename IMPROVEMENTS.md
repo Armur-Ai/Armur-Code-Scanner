@@ -9,10 +9,10 @@ Built for the era of AI-generated code where automated security validation is es
 |---------|-------|---------|------------|
 | **v1.0** | Core Product | 5–14 | Polished CLI + TUI, typed Finding pipeline, zero-config UX, docs, SCA |
 | **v2.0** | The Agent Edge | 15–21 | Rebrand, AI layer, sandboxed DAST, exploit sim, attack paths, PR agent, MCP |
-| **v2.5** | Distribution & Community | 22–31 | Install everywhere, GitHub App, VS Code, CI/CD, Slack/Teams, SaaS, community |
-| **v3.0** | Scanner Breadth | 32–43 | Secrets, SAST, API, compliance, SBOM, supply chain, language tiers, IaC deep, containers |
-| **v3.5** | Advanced Capabilities | 44–55 | Observability, SSE, rules marketplace, fuzzing, PII, crypto, binary, threat modeling |
-| **v4.0** | Scale & Intelligence | 56–59 | Distributed workers, debt tracker, threat intel, LLM security |
+| **v2.5** | Distribution & Community | 22–32 | Install everywhere (with public metrics), GitHub App, VS Code, CI/CD, Slack/Teams, SaaS, community, **template ecosystem** |
+| **v3.0** | Scanner Breadth | 33–44 | Secrets, SAST, API, compliance, SBOM, supply chain, language tiers, IaC deep, containers |
+| **v3.5** | Advanced Capabilities | 45–56 | Observability, SSE, rules marketplace, fuzzing, PII, crypto, binary, threat modeling |
+| **v4.0** | Scale & Intelligence | 57–60 | Distributed workers, debt tracker, threat intel, LLM security |
 
 ---
 ## Phase 1: Foundation (DONE) — Sprints 1–4
@@ -2110,7 +2110,7 @@ This is the highest-leverage distribution play available right now.
 - [ ] Add integration tests that start the MCP server and call each tool via the MCP protocol
 
 ---
-## Phase 4: Distribution & Community (v2.5) — Sprints 22–31
+## Phase 4: Distribution & Community (v2.5) — Sprints 22–32
 
 Get Armur into every developer's hands. Homebrew, npm, pip, winget, Docker, GitHub App,
 VS Code extension, CI/CD for every platform, onboarding, analytics, Slack/Teams, SaaS, and community.
@@ -2206,6 +2206,31 @@ A tool is only as good as how easy it is to install. Every developer should be a
   - Changelog: generated from conventional commits
 - [ ] Release workflow: `git tag v1.0.0 && git push --tags` → goreleaser does everything else
 - [ ] Sign release binaries with Cosign for provenance attestation
+
+#### 22.9 Public Download Metrics & Adoption Tracking
+
+Every distribution channel must have **publicly visible download counts** — this creates social proof
+and lets us measure product-market fit in real time.
+
+- [ ] **npm**: Weekly download count visible at `npmjs.com/package/@armur/cli` — the primary public metric
+  - Add `@armur/cli` download badge to README: `![npm downloads](https://img.shields.io/npm/dw/@armur/cli)`
+  - Target: track weekly download growth as the north star adoption metric
+- [ ] **PyPI**: Download count visible at `pypi.org/project/armur/`
+  - Use `pypistats.org` for public charts: `pypistats.org/packages/armur`
+  - Add PyPI badge to README: `![PyPI downloads](https://img.shields.io/pypi/dw/armur)`
+- [ ] **Docker Hub**: Pull count visible at `hub.docker.com/r/armur/agent`
+  - Add badge: `![Docker pulls](https://img.shields.io/docker/pulls/armur/agent)`
+- [ ] **Homebrew**: Track via GitHub Releases download counts (goreleaser publishes assets)
+  - Use `ghcr.io` download counts as additional signal
+- [ ] **GitHub Releases**: Total download count per release visible on the Releases page
+  - Add total download badge: `![GitHub Downloads](https://img.shields.io/github/downloads/armur-ai/armur/total)`
+- [ ] **VS Code Marketplace**: Install count visible on the extension page
+  - Add badge: `![VS Code installs](https://img.shields.io/visual-studio-marketplace/i/armur-ai.armur-security)`
+- [ ] **Consolidated dashboard**: Create `armur.ai/stats` page showing all download counts in one view
+  - Pull from: npm API, PyPI API, Docker Hub API, GitHub API, VS Code Marketplace API
+  - Show weekly trend charts for each channel
+  - Display total aggregate installs prominently
+- [ ] Add all download badges to the main README in a single "Installs" badge row
 
 ---
 
@@ -2897,8 +2922,221 @@ making contributors successful. This sprint builds the ecosystem around Armur.
 - [ ] This generates high-quality SEO content, press coverage, and demonstrates Armur's capabilities at scale
 - [ ] Partner with CNCF, Apache Foundation, and similar orgs for responsible scanning of their projects
 
+### Sprint 32 — Community Ecosystem & Network Effects
+
+This is the growth engine. Like Nuclei's 9,000+ templates, Armur's value should compound with
+every community contribution. Every contributor becomes an evangelist. Every shared template
+makes the tool more valuable for everyone. This sprint builds the infrastructure for that flywheel.
+
+#### 32.1 Template Registry Infrastructure
+
+- [ ] Create `github.com/armur-ai/armur-templates` mono-repo — the community template hub
+- [ ] Directory structure:
+  ```
+  armur-templates/
+  ├── rules/              # Security rule packs (Semgrep YAML)
+  │   ├── go-security/
+  │   ├── python-owasp/
+  │   └── jwt-misconfig/
+  ├── exploits/           # Exploit PoC templates (for DAST sandbox)
+  │   ├── sqli/
+  │   ├── xss/
+  │   └── ssrf/
+  ├── sandboxes/          # Sandbox profiles (Dockerfile + compose templates)
+  │   ├── django/
+  │   ├── express/
+  │   ├── spring-boot/
+  │   └── rails/
+  ├── fixes/              # Auto-fix recipes (pattern → patch)
+  │   ├── go/
+  │   ├── python/
+  │   └── javascript/
+  ├── chains/             # Attack chain definitions
+  │   ├── sqli-to-rce.yaml
+  │   └── ssrf-to-cloud-keys.yaml
+  └── index.json          # Machine-readable template index
+  ```
+- [ ] `index.json` schema: `{ "templates": [{ "name": "go-security", "type": "rules", "version": "1.2.0", "count": 24, "languages": ["go"], "author": "...", "downloads": 0 }] }`
+- [ ] Automated CI on the templates repo: validate YAML schema, run tests, update index.json on merge
+- [ ] PR-based contribution workflow with CODEOWNERS review for each template category
+- [ ] Template versioning: semver per template pack, `armur templates update` fetches latest
+
+#### 32.2 Exploit Templates (The Nuclei Parallel)
+
+This is where Armur builds the deepest moat. Community-contributed exploit PoCs that run safely
+in sandboxes. The more templates, the more vulnerabilities Armur can confirm.
+
+- [ ] Exploit template format (YAML, inspired by Nuclei):
+  ```yaml
+  id: sqli-union-based
+  name: SQL Injection — Union-Based Extraction
+  severity: critical
+  type: http
+  tags: [sqli, owasp-a03, cwe-89]
+  author: "@contributor"
+
+  requests:
+    - method: GET
+      path: "{{target}}{{path}}?{{param}}=1' UNION SELECT 1,2,3--"
+      matchers:
+        - type: regex
+          part: body
+          regex: ["(error in your SQL|mysql_fetch|pg_query|sqlite3)"]
+      extractors:
+        - type: regex
+          name: db_error
+          regex: ["(MySQL|PostgreSQL|SQLite|ORA-\\d+)"]
+
+  evidence:
+    description: "SQL injection confirmed via error-based detection"
+    impact: "Full database read access"
+    remediation: "Use parameterized queries"
+  ```
+- [ ] Template runner in `internal/exploit/template_runner.go`:
+  - Parse YAML template
+  - Execute HTTP requests against sandbox URL
+  - Apply matchers and extractors
+  - Generate `ExploitResult` with evidence
+- [ ] `armur templates search sqli` — search exploit templates by tag, CWE, or keyword
+- [ ] `armur templates run sqli-union-based --url <sandbox-url>` — run a specific exploit template
+- [ ] Template authors get credit: "Found by exploit template `sqli-union-based` by @contributor"
+- [ ] Track template effectiveness: how often each template confirms a finding (used to rank templates)
+
+#### 32.3 Sandbox Profiles
+
+Community-contributed "how to build and run this framework in a sandbox" profiles.
+
+- [ ] Sandbox profile format:
+  ```yaml
+  id: django-app
+  name: Django Application
+  framework: django
+  language: python
+  author: "@contributor"
+
+  detection:
+    files: ["manage.py", "settings.py", "wsgi.py"]
+    patterns: ["django"]
+
+  build:
+    dockerfile: |
+      FROM python:3.12-slim
+      WORKDIR /app
+      COPY requirements.txt .
+      RUN pip install -r requirements.txt
+      COPY . .
+    env:
+      - DJANGO_SETTINGS_MODULE=myapp.settings
+      - DATABASE_URL=sqlite:///tmp/test.db
+      - SECRET_KEY=armur-test-secret
+
+  run:
+    command: "python manage.py runserver 0.0.0.0:8000"
+    port: 8000
+    health_check: "/admin/login/"
+    startup_timeout: 30
+  ```
+- [ ] `armur templates install django-app` — install a sandbox profile locally
+- [ ] Sandbox engine (Sprint 17) auto-selects the matching profile based on detection rules
+- [ ] Community can contribute profiles for any framework: Next.js, FastAPI, Spring Boot, Rails, Laravel, Gin, etc.
+- [ ] The more profiles, the more projects Armur can auto-sandbox and DAST-test
+
+#### 32.4 Fix Recipes
+
+Community-contributed auto-fix patterns: "for this vulnerability pattern, apply this code transformation."
+
+- [ ] Fix recipe format:
+  ```yaml
+  id: go-sql-injection-fix
+  name: Parameterize SQL Query (Go)
+  language: go
+  cwe: CWE-89
+  author: "@contributor"
+
+  pattern: |
+    db.Query(fmt.Sprintf("SELECT * FROM users WHERE id = %s", $VAR))
+
+  fix: |
+    db.Query("SELECT * FROM users WHERE id = $1", $VAR)
+
+  test:
+    vulnerable: |
+      db.Query(fmt.Sprintf("SELECT * FROM users WHERE id = %s", userID))
+    fixed: |
+      db.Query("SELECT * FROM users WHERE id = $1", userID)
+  ```
+- [ ] `armur fix --recipe go-sql-injection-fix <finding-id>` — apply a specific fix recipe
+- [ ] `armur fix --auto` — automatically find and apply matching recipes for all findings
+- [ ] Fix recipes complement the AI-generated fixes (Sprint 16) with deterministic, tested patterns
+- [ ] Track recipe success rate: how often each recipe successfully fixes the finding
+
+#### 32.5 Attack Chain Definitions
+
+Community-contributed vulnerability chaining rules for attack path analysis (Sprint 19).
+
+- [ ] Chain definition format:
+  ```yaml
+  id: ssrf-to-cloud-credential-theft
+  name: SSRF → Cloud Metadata → Credential Theft
+  severity: critical
+  author: "@contributor"
+
+  chain:
+    - finding_type: ssrf
+      description: "SSRF allows internal HTTP requests"
+    - action: "Request cloud metadata endpoint"
+      url: "http://169.254.169.254/latest/meta-data/iam/security-credentials/"
+    - outcome: "AWS IAM credentials exposed"
+      impact: "Full AWS account access"
+
+  detection:
+    requires:
+      - cwe: CWE-918  # SSRF
+    context:
+      - cloud_provider: aws  # OR gcp, azure
+  ```
+- [ ] Chain definitions loaded during attack path analysis (Sprint 19)
+- [ ] The more chains the community defines, the more attack paths Armur discovers
+
+#### 32.6 `armur templates` CLI
+
+- [ ] `armur templates list` — browse all available templates across all categories (rules, exploits, sandboxes, fixes, chains)
+- [ ] `armur templates search <query>` — search by keyword, CWE, language, category, or author
+- [ ] `armur templates install <name>` — download and install a template pack to `~/.armur/templates/`
+- [ ] `armur templates update` — update all installed templates to latest versions
+- [ ] `armur templates create` — interactive wizard to scaffold a new template (picks category, generates YAML skeleton)
+- [ ] `armur templates test <file>` — validate and test a template locally before contributing
+- [ ] `armur templates publish <file>` — submit a template as a PR to `armur-ai/armur-templates` (requires GitHub auth)
+- [ ] `.armur.yml` integration:
+  ```yaml
+  templates:
+    rules:
+      - go-security@1.2.0
+      - python-owasp@2.0.1
+    exploits:
+      - sqli-advanced@1.0.0
+    sandboxes:
+      - django-app@1.0.0
+    local:
+      - ./my-custom-templates/
+  ```
+
+#### 32.7 Contributor Metrics & Recognition
+
+- [ ] Public contributor leaderboard at `armur.ai/contributors`:
+  - Top contributors by: templates submitted, downloads generated, findings confirmed
+  - "Template of the Month" featured on the homepage
+- [ ] Template download counts visible on each template's page (like npm package pages)
+- [ ] Author attribution in every finding: "Detected by rule `go-sql-injection` by @contributor"
+- [ ] GitHub profile badge: "Armur Template Author" for anyone with an accepted template
+- [ ] Template stats in `armur templates list`: name, downloads, confirmed findings, last updated
+- [ ] "Powered by N community templates" counter displayed in the TUI scan dashboard
+
 ---
-## Phase 5: Scanner Breadth (v3.0) — Sprints 32–43
+
+## Phase 5: Scanner Breadth (v3.0) — Sprints 33–44
+
+*Note: Sprint numbers in Phase 5–7 shifted by +1 due to the addition of Sprint 32 (Community Ecosystem).*
 
 Deep coverage across secrets, taint tracking, API security, compliance, SBOM, supply chain, language tiers, IaC deep, and container image security.
 These sprints make Armur the most comprehensive open-source scanner available.
