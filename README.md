@@ -1,322 +1,311 @@
-# Armur Code Scanner
+<div align="center">
 
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Discord](https://img.shields.io/discord/1021371417134125106)](https://discord.gg/PEycrqvd)
+# Armur
 
-This is the official repository for the Armur static code scanner, built with Go. It uses the best open-source static analysis tools, combining them into a seamless pipeline for identifying security vulnerabilities and code quality issues. This tool is designed to be efficient and effective, particularly for languages like Go, Python, and JavaScript.
+### Your Personal Security Agent
 
-This project was born from conversations with hundreds of red teamers, bug bounty hunters, security researchers, and developers. It aims to automate a significant portion of the work involved in finding security flaws in code.
+**SAST + DAST + Exploit Simulation + Attack Path Analysis — All Automated**
 
-Visit [armur.ai](https://armur.ai) to use the cloud-based version of this tool, which includes proprietary AI agents powered by LLMs to provide extremely detailed code security reports for Go, Python, JavaScript, and smart contract code for Solidity, Move, and Solana (Rust).
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Go](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go&logoColor=white)](https://golang.org)
+[![GitHub Stars](https://img.shields.io/github/stars/Armur-Ai/Armur-Code-Scanner?style=social)](https://github.com/Armur-Ai/Armur-Code-Scanner)
+[![Discord](https://img.shields.io/discord/1021371417134125106?label=Discord&logo=discord)](https://discord.gg/PEycrqvd)
 
-## Table of Contents
+[Quick Start](#quick-start) &bull; [Features](#features) &bull; [Languages](#supported-languages) &bull; [CLI Reference](#cli-commands) &bull; [CI/CD](#cicd-integration) &bull; [MCP](#ai-editor-integration-mcp) &bull; [Contributing](#contributing)
 
-1. [Key Features](#key-features)
-2. [Using the CLI tool](#using-the-armur-cli)
-3. [How It Works](#how-armur-code-scanner-works)
-4. [Getting Started](#getting-started)
-5. [Project Structure](#project-structure)
-6. [Supported vulnerabilities](#supported-vulnerabilities)
-7. [Additional vulnerabilities information](#additional-vulnerability-information)
-8. [Scanning Local Repositories via Mounted Volume](#scanning-local-repositories-via-mounted-volume)
-9. [Testing with Postman](#testing-with-postman)
-10. [License](#license)
+</div>
 
-## Using the Armur CLI
+---
 
-For a more streamlined experience, you can use the Armur CLI tool. The CLI provides a command-line interface to interact with the Armur Code Scanner, making it easier to scan your codebases directly from your terminal. Following are the steps to quickly get started using it, and for detailed instructions on installation and usage of the CLI, please refer to our [CLI Documentation](/cli/README.md).
+Armur is an open-source personal security agent that goes beyond scanning. It analyzes your code with 30+ security tools, runs your application in a sandbox for dynamic testing, simulates real exploits to confirm vulnerabilities, maps attack paths, and reviews every pull request — all automatically.
 
-### Installing the CLI
+Built for the era of AI-generated code where automated security validation is essential.
 
-These instructions will allow you to quickly setup and install the cli tool for usage.
+## Quick Start
+
+**Install** (pick one):
 
 ```bash
-# Clone the repository
-git clone https://github.com/Armur-AI/Armur-Code-Scanner.git
+# macOS / Linux
+brew install armur-ai/tap/armur
 
-# Navigate to the CLI directory
-cd Armur-Code-Scanner/cli
+# npm (any platform)
+npm install -g @armur/cli
 
-# Build the CLI
-go build -o armur-cli
-# verify that the cli has been installed
-./armur-cli
+# pip
+pip install armur
 
-# Move to your PATH (optional). This allows you to run armur anywhere in you machine
-sudo mv armur-cli /usr/local/bin/
+# Direct download
+curl -fsSL https://install.armur.ai | sh
+
+# Docker (zero install)
+docker run --rm -v $(pwd):/scan armur/agent scan /scan
 ```
 
-### After installing the tool
-
-You can now run a couple of commands that allow you to do code scanning functionality.
-
-If the armur code scanner project is not running on your machine, you can either run that manually using
+**Run your first scan:**
 
 ```bash
-1. make docker-up
-## or
-2. armur-cli docker
+# Interactive mode with guided wizard + live dashboard
+armur run
+
+# Direct scan of current directory
+armur scan .
+
+# Scan a GitHub repository
+armur scan https://github.com/owner/repo -l go
+
+# Deep scan with all tools
+armur scan . --advanced
 ```
 
-The you can start by running a scan on a github repository by running the following command.
+That's it. Armur auto-detects the language, runs the right tools, deduplicates findings, and shows you a severity-sorted summary.
+
+## Features
+
+### SAST (Static Application Security Testing)
+Run 30+ security tools across 10 languages with a single command. Findings are deduplicated, severity-normalized, and sorted by risk.
+
+### DAST (Dynamic Application Security Testing)
+Armur can auto-detect your tech stack, generate a Dockerfile, build and run your app in an isolated sandbox, and hammer it with security tests — passive header checks, active injection probes, Nuclei CVE templates, and ZAP deep scans.
+
+### Exploit Simulation
+Don't just find vulnerabilities — prove they're exploitable. Armur generates proof-of-concept exploits (SQL injection, XSS, command injection, path traversal, SSRF) and runs them safely inside the sandbox. Confirmed exploits get a `[CONFIRMED]` badge.
+
+### Attack Path Analysis
+Individual findings are noise. Attack paths are signal. Armur chains related findings into attack graphs: "SSRF + cloud metadata = credential theft" and generates Mermaid diagrams for visualization.
+
+### PR Security Agent
+Armur automatically reviews pull requests — runs SAST on the diff, checks for new vulnerable dependencies, scans for leaked secrets, and posts a detailed review with inline comments.
 
 ```bash
-armur-cli scan <github-url> --language go
+armur review https://github.com/owner/repo/pull/123
 ```
 
-## Key Features
+### AI-Powered Intelligence
+Uses Claude API or local LLMs (Ollama) for:
+- `armur explain <finding-id>` — plain-English explanation with attack scenario
+- `armur fix <finding-id>` — AI-generated code patch
+- Tech stack detection for DAST sandbox creation
 
-- **Multi-Language Support**: Scans Go, Python, and JavaScript code.
-- **Comprehensive Vulnerability Detection**: Identifies a broad spectrum of vulnerabilities using various static analysis tools.
-- **Code Quality Analysis**: Performs checks for code style issues, complex functions, and dead code.
-- **OWASP and SANS Compliance**: Generates reports based on OWASP and SANS guidelines.
-- **Advanced Security Scans**: Detects duplicate code, exposed secrets, infrastructure misconfigurations, and SCA vulnerabilities.
-- **Individual File Scanning**: Allows for quick analysis of individual source files.
-- **Asynchronous Task Processing**: Leverages Asynq for background task processing and Redis for result storage.
-- **API Documentation**: Comprehensive API documentation using Swagger/OpenAPI.
-- **Easy Development**: Makefile provided for easy building, testing, and running.
+### MCP Server for AI Editors
+Works with Claude Code, Cursor, and Windsurf as an MCP server:
+```bash
+claude mcp add armur -- armur mcp
+```
 
-## How Armur Code Scanner Works
+## Supported Languages
 
-1.  **API Request:** Initiate a scan using the API, providing a Git repository URL or a file path.
-2.  **Task Enqueue:** The API enqueues a scan task using Asynq, including repository URL, language, scan type, and a unique task ID.
-3.  **Repository Cloning:** If a repository URL is provided, the tool clones it to a temporary directory.
-4.  **Scan Execution:** Asynq worker processes the tasks using relevant static analysis tools like Semgrep, gosec, bandit and eslint based on the programming language specified.
-5.  **Result Storage:** Scan results are stored in Redis with a TTL of 24 hours, using the task ID as the key.
-6.  **Status Check:** Query the scan results using the Task Status API with the unique task ID.
-7.  **Report Generation:** Generate OWASP and SANS reports by fetching and reformatting the scan results.
+| Language | Tools | Categories |
+|----------|-------|------------|
+| **Go** | semgrep, gosec, govet, staticcheck, gocyclo, govulncheck | SAST, SCA, Quality |
+| **Python** | semgrep, bandit, pylint, radon, pydocstyle, pip-audit | SAST, SCA, Quality |
+| **JavaScript/TS** | semgrep, eslint | SAST, Quality |
+| **Rust** | semgrep, cargo-audit, cargo-geiger, clippy | SAST, SCA |
+| **Java/Kotlin** | semgrep, spotbugs, pmd, dependency-check | SAST, SCA |
+| **Ruby** | semgrep, brakeman, bundler-audit | SAST, SCA |
+| **PHP** | semgrep, phpcs, psalm | SAST, Quality |
+| **C/C++** | semgrep, cppcheck, flawfinder | SAST |
+| **C#/.NET** | semgrep, security-code-scan, roslynator | SAST, Quality |
+| **Solidity** | semgrep, slither, mythril | SAST |
+| **IaC** | semgrep, checkov, hadolint, tfsec, kics, kube-linter, kube-score, terrascan, kubesec | IaC |
+| **Containers** | trivy, grype | SCA, Image |
+| **Secrets** | trufflehog, gitleaks | Secrets |
+| **Shell/Bash** | shellcheck | SAST |
+| **Swift** | swiftlint | SAST |
 
-## Getting Started
+**Plus:** SCA for all ecosystems (npm, pip, Go, Cargo, Maven, RubyGems, Composer, NuGet, CocoaPods, pub, Hex, Conan, sbt) via osv-scanner and ecosystem-specific auditors.
 
-### Documentation
+## CLI Commands
 
-You can follow out detailed documentation by doing the following steps
+| Command | Description |
+|---------|-------------|
+| `armur run` | Interactive wizard + live TUI dashboard |
+| `armur scan <target>` | One-shot scan (file, directory, or git URL) |
+| `armur review <pr-url>` | Review a GitHub/GitLab pull request |
+| `armur explain <id>` | AI explanation of a finding |
+| `armur fix <id>` | AI-generated code patch |
+| `armur serve` | Start the embedded API server |
+| `armur doctor` | Check which tools are installed |
+| `armur init` | Create `.armur.yml` config file |
+| `armur history` | List past scans |
+| `armur compare <id1> <id2>` | Diff two scan results |
+| `armur report --format html` | Generate HTML/CSV/OWASP/SANS reports |
+| `armur mcp` | Start MCP server for AI editors |
+| `armur quickstart` | Interactive getting-started guide |
+| `armur completion <shell>` | Shell completions (bash/zsh/fish/powershell) |
+| `armur version` | Print version info |
+
+### Key Flags
 
 ```bash
-git clone https://github.com/Armur-Ai/Armur-Code-Scanner.git
-cd Armur-Code-Scanner/docs-site
-
-npm i --legacy-peer-deps
+armur scan . --advanced              # deep scan with all tools
+armur scan . --format sarif          # SARIF output (for GitHub Security tab)
+armur scan . --fail-on-severity high # exit code 1 on HIGH+ findings (CI use)
+armur scan . --min-severity medium   # suppress LOW and INFO findings
+armur scan . --watch                 # re-scan on file changes
+armur scan . --no-server             # skip auto-starting the embedded server
 ```
 
-This should open our developer logs at `localhost:3000`, and you can open these from your browser
+## CI/CD Integration
 
-### Prerequisites
-
-- [Docker](https://www.docker.com/) and [Docker Compose](https://docs.docker.com/compose/) installed on your system.
-- [Go](https://golang.org/dl/) installed on your system (for development purposes)
-
-### Running Locally (Development)
-
-1.  **Clone the Repository:**
-
-```bash
-git clone https://github.com/Armur-Ai/Armur-Code-Scanner.git
-cd Armur-Code-Scanner
-```
-
-2.  **Start the Development Environment:**
-
-First copy/rename `.env.example` file to `.env` and run the following commands
-
-```bash
-make docker-up
-```
-
-OR
-
-```bash
-docker-compose up --build -d
-```
-
-This command does the following:
-
-- Builds the application image based on `Dockerfile`.
-- Starts the application and Redis containers in development mode using `docker-compose.yml`.
-- Generates the swagger documentation
-- After running this, the application will be available at `http://localhost:4500`.
-- Swagger documentation will be available here `http://localhost:4500/swagger/index.html`
-
-### Project Structure
-
-The codebase is organized into the following main directories:
-
-```bash
-├── cmd/                    # Application entry points
-│   └── server/main.go      # Main server application
-├── internal/               # Private application code
-│   ├── api/                # API handlers and routes
-│   ├── redis/              # Redis client connection
-│   ├── tasks/              # Task implememtation for queueing, running and storing results on redis
-│   ├── tools/              # Integration with security tools for the different programming languages
-│   └── worker/             # Background worker implementation that adds tasks to the queue
-├── pkg/                    # Public libraries that can be used by external applications
-│   ├── common/             # Shared utilities and constants
-│   └── utils.go            # General utility functions
-├── docs/                   # Documentation files using swagger
-├── postman/                # Postman collection for API testing
-├── rule_config/            # Configuration files for security tools
-├── shared_tmp/             # Temporary files directory
-└── docker-compose.yml      # Docker composition for development
-└── Dockerfile              # Dockerfile for the code scanner
-└── .env.example            # env example file
-└── README.md               # env example file
-
-```
-
-### Supported Vulnerabilities
-
-Armur Code Scanner is capable of detecting the following types of vulnerabilities and coding weaknesses, based on the Common Weakness Enumeration (CWE):
-
-| CWE ID    | Vulnerability Name                                                                                                     |
-| :-------- | :--------------------------------------------------------------------------------------------------------------------- |
-| CWE-20    | Improper Input Validation                                                                                              |
-| CWE-78    | Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')                             |
-| CWE-79    | Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')                                   |
-| CWE-89    | Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')                                   |
-| CWE-90    | Improper Neutralization of Special Elements used in an LDAP Query ('LDAP Injection')                                   |
-| CWE-94    | Improper Control of Generation of Code ('Code Injection')                                                              |
-| CWE-400   | Uncontrolled Resource Consumption ('Resource Exhaustion')                                                              |
-| CWE-287   | Improper Authentication                                                                                                |
-| CWE-306   | Missing Authentication for Critical Function                                                                           |
-| CWE-302   | Improper Authorization                                                                                                 |
-| CWE-269   | Improper Privilege Management                                                                                          |
-| CWE-284   | Improper Access Control                                                                                                |
-| CWE-922   | Insecure Storage of Sensitive Information                                                                              |
-| CWE-384   | Session Fixation                                                                                                       |
-| CWE-613   | Insufficient Session Expiration                                                                                        |
-| CWE-327   | Use of a Broken or Risky Cryptographic Algorithm                                                                       |
-| CWE-330   | Use of Insufficiently Random Values                                                                                    |
-| CWE-338   | Use of Cryptographically Weak PRNG                                                                                     |
-| CWE-325   | Missing Required Cryptographic Step                                                                                    |
-| CWE-200   | Exposure of Sensitive Information to an Unauthorized Actor                                                             |
-| CWE-201   | Insertion of Sensitive Information into Sent Data                                                                      |
-| CWE-598   | Information Exposure Through Query Strings in URL                                                                      |
-| CWE-209   | Generation of Error Message Containing Sensitive Information                                                           |
-| CWE-310   | Cryptographic Issues                                                                                                   |
-| CWE-502   | Deserialization of Untrusted Data                                                                                      |
-| CWE-917   | Improper Neutralization of Special Elements used in an Expression Language Statement ('Expression Language Injection') |
-| CWE-829   | Inclusion of Functionality from Untrusted Control Sphere                                                               |
-| CWE-434   | Unrestricted Upload of File with Dangerous Type                                                                        |
-| CWE-494   | Download of Code Without Integrity Check                                                                               |
-| CWE-611   | Improper Restriction of XML External Entity Reference                                                                  |
-| CWE-918   | Server-Side Request Forgery (SSRF)                                                                                     |
-| CWE-862   | Missing Authorization                                                                                                  |
-| CWE-22    | Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')                                         |
-| CWE-73    | External Control of File Name or Path                                                                                  |
-| CWE-552   | Unsafe Handling of File Uploads                                                                                        |
-| CWE-119   | Improper Restriction of Operations within the Bounds of a Memory Buffer                                                |
-| CWE-416   | Use After Free                                                                                                         |
-| CWE-476   | NULL Pointer Dereference                                                                                               |
-| CWE-787   | Out-of-bounds Write                                                                                                    |
-| CWE-259   | Use of Hard-coded Password                                                                                             |
-| CWE-798   | Use of Hard-coded Credentials                                                                                          |
-| CWE-352   | Cross-Site Request Forgery (CSRF)                                                                                      |
-| CWE-601   | URL Redirection to Untrusted Site ('Open Redirect')                                                                    |
-| MANY MORE |
-
-### Additional Vulnerability Information
-
-In addition to these, Armur Code Scanner also leverages the power of the following open source tools:
-
-- **Semgrep:** For detecting various coding patterns and security vulnerabilities.
-- **Gosec:** For Go-specific security issues.
-- **Bandit:** For Python-specific security vulnerabilities.
-- **ESLint:** For detecting JavaScript security issues and code quality problems.
-- **OSV-Scanner:** For identifying Software Composition Analysis (SCA) issues.
-- **Trufflehog:** For identifying exposed secrets in your codebase.
-- **Checkov:** For identifying Infrastructure as code misconfigurations.
-- **Trivy:** For identifying infrastructure and container vulnerabilities, and secrets.
-- **JSCPD:** For finding duplicated code.
-- **Pydocstyle, Radon, Pylint:** For Python specific code quality issues.
-- **Golint, Govet, Staticcheck, Gocyclo:** For GO specific code quality issues.
-- **Vulture:** For identifying dead code in Python projects.
-
-### Scanning Local Repositories via Mounted Volume
-
-To enable scanning of local repositories, the Docker Compose configuration mounts a volume from your host machine into the container:
+### GitHub Actions
 
 ```yaml
-volumes:
-  - ./shared_tmp:/armur/repos
+- name: Armur Security Scan
+  uses: armur-ai/armur-code-scanner@main
+  with:
+    path: '.'
+    fail-on-severity: 'high'
+    upload-sarif: 'true'
 ```
 
-This line tells Docker to take the `shared_tmp` directory from your local machine (host) and mount it inside the container at the path `/armur/repos`. This means any folders you place inside `shared_tmp` will be accessible to the scanner within the container at `/armur/repos`.
+Or use the CLI directly:
 
-To scan a local codebase:
-
-1. Create or copy your project folder into the `shared_tmp` directory (e.g., `shared_tmp/my-local-project`).
-2. When making a request to the `/api/v1/scan/local` endpoint, use the container path in your request body:
-
-```json
-{
-  "local_path": "/armur/repos/my-local-project",
-  "language": "go"
-}
+```yaml
+- run: curl -fsSL https://install.armur.ai | sh
+- run: armur scan . --format sarif --output results.sarif --fail-on-severity high
+- uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: results.sarif
 ```
 
-This allows you to scan any local project without needing to push it to a remote repository.
+### GitLab CI
 
-### Testing with Postman
+```yaml
+armur-scan:
+  image: armur/agent:latest
+  script:
+    - armur scan . --format sarif --output gl-sast-report.json --fail-on-severity high
+  artifacts:
+    reports:
+      sast: gl-sast-report.json
+```
 
-#### A Postman collection is included in the /postman directory for easy API testing.
+### Other CI Platforms
 
-You can use Postman to send requests to the API endpoints. Here's how:
+See full guides for [CircleCI](docs/ci/circleci.md), [Jenkins](docs/ci/jenkins.md), [Azure DevOps](docs/ci/), and [Bitbucket Pipelines](docs/ci/).
 
-1.  **API Endpoints:**
+## AI Editor Integration (MCP)
 
-- **`POST /api/v1/scan/repo`:**
+Armur works as an MCP server with Claude Code, Cursor, and Windsurf:
 
-  - Body:
-    ```json
-    {
-      "repository_url": "https://github.com/go-git/go-git",
-      "language": "go"
-    }
-    ```
-  - Returns a `task_id` upon successful submission.
+```bash
+# Claude Code
+claude mcp add armur -- armur mcp
 
-- **`POST /api/v1/advanced-scan/repo`:**
+# Cursor — add to ~/.cursor/mcp.json
+# Windsurf — add to Windsurf MCP config
+```
 
-  - Body:
-    ```json
-    {
-      "repository_url": "https://github.com/go-git/go-git",
-      "language": "go"
-    }
-    ```
-  - Returns a `task_id` upon successful submission.
+Available MCP tools:
+- `armur_scan_path` — scan a directory
+- `armur_scan_code` — scan a code snippet inline
+- `armur_check_dependency` — check a package for vulnerabilities
+- `armur_explain_finding` — AI explanation of a finding
+- `armur_get_history` — recent scan history
 
-- **`POST /api/v1/scan/local`:**
+## Configuration
 
-  - Body:
-    ```json
-    {
-      "local_path": "/armurs/repos/<repo_name>",
-      "language": "go"
-    }
-    ```
-  - Returns a `task_id` upon successful submission. Note, place your repo copy under the `shared_tmp` directory.
+Create `.armur.yml` in your project root (or run `armur init`):
 
-- **`POST /api/v1/scan/file`:**
+```yaml
+scan:
+  depth: quick                  # quick | deep
+  severity-threshold: medium    # minimum severity to report
+  fail-on-findings: true        # exit code 1 in CI
 
-  - Select `form-data` and upload the file.
-  - Returns a `task_id` upon successful submission.
+exclude:
+  - vendor/
+  - node_modules/
+  - testdata/
 
-- **`GET /api/v1/status/:task_id`:**
+tools:
+  disabled:
+    - gocyclo                   # skip specific tools
+```
 
-  - Replace `:task_id` with the ID from a previous request.
-  - Returns the status of the task or the scan results.
+Full reference: [Configuration docs](docs/configuration/armur-yml.md)
 
-- **`GET /api/v1/reports/owasp/:task_id`:**
+## Architecture
 
-  - Replace `:task_id` with the ID from a previous request.
-  - Returns the Owasp report.
+```
+                   ┌──────────────┐
+                   │   armur CLI  │  (Cobra + Bubbletea TUI)
+                   └──────┬───────┘
+                          │
+                ┌─────────▼──────────┐
+                │   API Server (Gin) │  port 4500
+                └─────────┬──────────┘
+                          │
+              ┌───────────▼────────────┐
+              │  Asynq Worker (Redis)  │
+              └───────────┬────────────┘
+                          │
+         ┌────────────────▼─────────────────┐
+         │        Tool Runners (30+)         │
+         │  semgrep, gosec, bandit, eslint,  │
+         │  trivy, gitleaks, slither, ...    │
+         └────────────────┬─────────────────┘
+                          │
+              ┌───────────▼────────────┐
+              │  Finding Pipeline       │
+              │  Normalize → Dedup →    │
+              │  Fingerprint → Score    │
+              └───────────┬────────────┘
+                          │
+         ┌────────────────▼─────────────────┐
+         │   Output: Text, JSON, SARIF,     │
+         │   HTML, CSV, OWASP, TUI          │
+         └──────────────────────────────────┘
+```
 
-- **`GET /api/v1/reports/sans/:task_id`:**
-  - Replace `:task_id` with the ID from a previous request.
-  - Returns the SANS report.
+## Self-Hosted (Docker)
 
-### License
+```bash
+# Start server + Redis
+docker-compose up -d
 
-**This project is licensed under the MIT License - see the LICENSE file for details.**
+# Scan via API
+curl -X POST http://localhost:4500/api/v1/scan/repo \
+  -H "Content-Type: application/json" \
+  -d '{"repository_url": "https://github.com/owner/repo", "language": "go"}'
+```
+
+API docs available at `http://localhost:4500/swagger/index.html`
+
+## Security
+
+Found a vulnerability in Armur itself? See [SECURITY.md](SECURITY.md) for responsible disclosure.
+
+## Contributing
+
+Contributions are welcome! See our [Contributing Guide](CONTRIBUTING.md) for:
+- How to add a new tool integration
+- How to add a new language
+- How to write security rules
+- Code style and PR process
+
+## Roadmap
+
+See [IMPROVEMENTS.md](IMPROVEMENTS.md) for the full 60-sprint roadmap organized into 7 phases:
+
+| Phase | Focus |
+|-------|-------|
+| v1.0 Core Product | CLI, TUI, Finding pipeline, docs, SCA |
+| v2.0 Agent Edge | Rebrand, AI layer, DAST, exploits, attack paths, PR agent, MCP |
+| v2.5 Distribution | npm/Homebrew/pip, GitHub App, VS Code, CI/CD |
+| v3.0 Scanner Breadth | Secrets, SAST, API security, compliance, SBOM, supply chain |
+| v3.5 Advanced | Observability, fuzzing, PII, crypto, threat modeling |
+| v4.0 Scale | Distributed workers, threat intel, LLM security |
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.
+
+---
+
+<div align="center">
+
+**[armur.ai](https://armur.ai)** &bull; [Discord](https://discord.gg/PEycrqvd) &bull; [Documentation](docs/)
+
+</div>
