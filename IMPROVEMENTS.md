@@ -828,7 +828,7 @@ use, the CLI should be able to start everything it needs without any external se
 
 ---
 
-### Sprint 13 — Documentation, README & CLI Reference
+### Sprint 13 — Documentation, README & CLI Reference [DONE]
 
 Documentation is a first-class product. A developer who can't figure out how to use a tool in
 5 minutes will not use it. This sprint treats every doc as a user-facing feature and ensures
@@ -1185,7 +1185,7 @@ These apply to all code written going forward, ensuring future contributors unde
 
 ---
 
-### Sprint 14 — Software Composition Analysis: All Ecosystems
+### Sprint 14 — Software Composition Analysis: All Ecosystems [DONE]
 
 Expand SCA coverage from the current (Go modules + generic OSV) to every major package ecosystem.
 Goal: comprehensive dependency vulnerability detection regardless of language.
