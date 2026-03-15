@@ -26,6 +26,9 @@ func RegisterRoutes(r *gin.Engine) {
 		// Progress (SSE stream)
 		api.GET("/progress/:task_id", TaskProgress)
 
+		// Cancel an in-progress scan
+		api.DELETE("/scan/:task_id", CancelScan)
+
 		// Reports
 		api.GET("/reports/owasp/:task_id", TaskOwasp)
 		api.GET("/reports/sans/:task_id", TaskSans)

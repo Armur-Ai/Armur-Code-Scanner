@@ -301,6 +301,22 @@ func TaskSans(c *gin.Context) {
 	c.JSON(http.StatusOK, report)
 }
 
+// CancelScan cancels an in-progress scan task.
+func CancelScan(c *gin.Context) {
+	taskID := c.Param("task_id")
+	if !middleware.ValidateTaskID(taskID) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid task_id format"})
+		return
+	}
+
+	if err := tasks.CancelTask(taskID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to cancel task", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "cancelled", "task_id": taskID})
+}
+
 // TaskProgress streams scan progress via Server-Sent Events (SSE).
 // The client connects and receives real-time updates as tools execute.
 func TaskProgress(c *gin.Context) {
