@@ -2117,7 +2117,7 @@ VS Code extension, CI/CD for every platform, onboarding, analytics, Slack/Teams,
 
 ---
 
-### Sprint 22 — Zero-Friction Distribution (Every Platform, One Command)
+### Sprint 22 — Zero-Friction Distribution [DONE] (Every Platform, One Command)
 
 A tool is only as good as how easy it is to install. Every developer should be able to go from
 "I heard about Armur" to running their first scan in under 60 seconds, on any platform.
@@ -2234,7 +2234,7 @@ and lets us measure product-market fit in real time.
 
 ---
 
-### Sprint 23 — GitHub Native: App, Actions & Security Tab
+### Sprint 23 — GitHub Native [DONE]: App, Actions & Security Tab
 
 GitHub is where most open source and enterprise code lives. Deep GitHub integration is the
 highest-leverage adoption channel for reaching developers who haven't discovered Armur yet.
@@ -2334,7 +2334,7 @@ highest-leverage adoption channel for reaching developers who haven't discovered
 
 ---
 
-### Sprint 24 — VS Code / Cursor / AI Editor Ecosystem
+### Sprint 24 — VS Code [DONE] / Cursor / AI Editor Ecosystem
 
 Building on the LSP server and core VS Code extension functionality, this sprint focuses on
 distribution, onboarding, and making the extension the #1 security extension on the marketplace.
@@ -2426,7 +2426,7 @@ distribution, onboarding, and making the extension the #1 security extension on 
 
 ---
 
-### Sprint 25 — CI/CD Ecosystem Breadth
+### Sprint 25 — CI/CD Ecosystem [DONE] Breadth
 
 One GitHub Action is not enough. Every developer uses a different CI system. Armur needs a
 first-class native integration in every major CI/CD platform.
@@ -2522,7 +2522,7 @@ first-class native integration in every major CI/CD platform.
 
 ---
 
-### Sprint 26 — Developer Onboarding & First-Run Experience
+### Sprint 26 — Developer Onboarding [DONE] & First-Run Experience
 
 The first 5 minutes with Armur determine whether a developer uses it again. This sprint focuses
 entirely on making those first 5 minutes remarkable.
@@ -2591,7 +2591,7 @@ A unified setup wizard for every integration, so developers never have to read d
 
 ---
 
-### Sprint 27 — Advanced Reporting & Analytics
+### Sprint 27 — Advanced Reporting [DONE] & Analytics
 
 #### 27.1 Security Posture Score
 
