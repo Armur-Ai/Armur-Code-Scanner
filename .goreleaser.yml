@@ -1,0 +1,77 @@
+version: 2
+
+builds:
+  - id: armur-server
+    main: ./cmd/server
+    binary: armur-server
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.ShortCommit}}
+      - -X main.date={{.Date}}
+
+  - id: armur-cli
+    dir: cli
+    binary: armur
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.ShortCommit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - id: cli-archive
+    builds:
+      - armur-cli
+    name_template: "armur_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+
+  - id: server-archive
+    builds:
+      - armur-server
+    name_template: "armur-server_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: 'checksums.txt'
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^chore:'
+      - '^test:'
+
+brews:
+  - name: armur
+    ids:
+      - cli-archive
+    repository:
+      owner: armur-ai
+      name: homebrew-tap
+    homepage: "https://armur.ai"
+    description: "Personal Security Agent — SAST + DAST + exploit simulation"
+    license: "MIT"
+    install: |
+      bin.install "armur"
+    test: |
+      system "#{bin}/armur", "version"
