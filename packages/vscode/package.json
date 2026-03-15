@@ -1,0 +1,75 @@
+{
+  "name": "armur-security",
+  "displayName": "Armur Security Agent",
+  "description": "Personal security agent for your code — SAST, DAST, exploit simulation, attack path analysis",
+  "version": "0.0.1",
+  "publisher": "armur-ai",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Linters", "Other"],
+  "keywords": ["security", "scanner", "SAST", "DAST", "DevSecOps", "vulnerability"],
+  "activationEvents": [
+    "workspaceContains:.armur.yml",
+    "onCommand:armur.scanWorkspace"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "armur.scanWorkspace",
+        "title": "Armur: Scan Workspace"
+      },
+      {
+        "command": "armur.explainFinding",
+        "title": "Armur: Explain Finding"
+      },
+      {
+        "command": "armur.fixFinding",
+        "title": "Armur: Fix with AI"
+      }
+    ],
+    "configuration": {
+      "title": "Armur Security",
+      "properties": {
+        "armur.scanDepth": {
+          "type": "string",
+          "default": "quick",
+          "enum": ["quick", "deep"],
+          "description": "Default scan depth"
+        },
+        "armur.scanOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically scan on file save"
+        },
+        "armur.scanOnOpen": {
+          "type": "boolean",
+          "default": true,
+          "description": "Scan workspace when opened"
+        },
+        "armur.minSeverity": {
+          "type": "string",
+          "default": "medium",
+          "enum": ["info", "low", "medium", "high", "critical"],
+          "description": "Minimum severity to display"
+        },
+        "armur.binaryPath": {
+          "type": "string",
+          "default": "armur",
+          "description": "Path to the armur binary"
+        },
+        "armur.useLocalMode": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run scans locally without a server"
+        }
+      }
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/armur-ai/armur"
+  },
+  "license": "MIT"
+}
