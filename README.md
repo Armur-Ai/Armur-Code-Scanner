@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="banner/vibescan-banner.gif" alt="vibescan banner" width="100%" />
+
 # vibescan
 
 ### Security Scanner for Vibe-Coded Software
