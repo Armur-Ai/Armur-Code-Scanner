@@ -2661,7 +2661,7 @@ A unified setup wizard for every integration, so developers never have to read d
 - [ ] `armur report pdf --schedule weekly --email ciso@example.com` — scheduled PDF delivery
 
 
-### Sprint 28 — Slack, Teams & Issue Tracker Integrations
+### Sprint 28 — Slack [DONE], Teams & Issue Tracker Integrations
 
 When a critical vulnerability is found at 2am in a nightly scan, the right person needs to know
 immediately — in the tool they use for communication, not in a dashboard they rarely visit.
@@ -2734,7 +2734,7 @@ immediately — in the tool they use for communication, not in a dashboard they 
 
 ---
 
-### Sprint 29 — Security Posture Badges & Social Proof
+### Sprint 29 — Security Posture [DONE] Badges & Social Proof
 
 Badges are a viral mechanism. Every GitHub README with an Armur badge is an ad for Armur.
 
@@ -2792,7 +2792,7 @@ Badges are a viral mechanism. Every GitHub README with an Armur badge is an ad f
 
 ---
 
-### Sprint 30 — Armur Cloud (Hosted SaaS)
+### Sprint 30 — Armur Cloud [DONE] (Hosted SaaS)
 
 Some users will not want to run their own server. Armur Cloud removes all infrastructure friction
 and adds team collaboration features that are impractical to self-host.
@@ -2846,7 +2846,7 @@ and adds team collaboration features that are impractical to self-host.
 
 ---
 
-### Sprint 31 — Community, Content & Growth Flywheel
+### Sprint 31 — Community [DONE], Content & Growth Flywheel
 
 Tools become category leaders not just from features, but from community, content, and
 making contributors successful. This sprint builds the ecosystem around Armur.
@@ -2922,7 +2922,7 @@ making contributors successful. This sprint builds the ecosystem around Armur.
 - [ ] This generates high-quality SEO content, press coverage, and demonstrates Armur's capabilities at scale
 - [ ] Partner with CNCF, Apache Foundation, and similar orgs for responsible scanning of their projects
 
-### Sprint 32 — Community Ecosystem & Network Effects
+### Sprint 32 — Community Ecosystem [DONE] & Network Effects
 
 This is the growth engine. Like Nuclei's 9,000+ templates, Armur's value should compound with
 every community contribution. Every contributor becomes an evangelist. Every shared template
@@ -3254,7 +3254,7 @@ across call boundaries — the class of analysis that CodeQL and Semgrep Pro are
 
 ---
 
-### Sprint 34 — API Security Analysis
+### Sprint 34 — API Security [DONE] Analysis
 
 #### 34.1 OpenAPI / Swagger Spec Security Analysis
 
@@ -3305,7 +3305,7 @@ across call boundaries — the class of analysis that CodeQL and Semgrep Pro are
 
 ---
 
-### Sprint 35 — Compliance Framework Mapping
+### Sprint 35 — Compliance [DONE] Framework Mapping
 
 Map every finding to every relevant compliance control so security teams can generate compliance evidence
 directly from scan results.
@@ -3359,7 +3359,7 @@ directly from scan results.
 
 ---
 
-### Sprint 36 — SBOM Generation & License Compliance
+### Sprint 36 — SBOM [DONE] Generation & License Compliance
 
 #### 36.1 SBOM Generation (CycloneDX + SPDX)
 
@@ -3403,7 +3403,7 @@ directly from scan results.
 
 ---
 
-### Sprint 37 — Supply Chain Security
+### Sprint 37 — Supply Chain [DONE] Security
 
 #### 37.1 Dependency Confusion Detection
 
@@ -3450,7 +3450,7 @@ the private package name on the public registry with a higher version number.
 
 ---
 
-### Sprint 38 — Language Expansion: Tier 1 (Java · Kotlin · C# · Rust)
+### Sprint 38 — Language Expansion: Tier 1 [DONE] (Java · Kotlin · C# · Rust)
 
 These four languages represent the highest-demand enterprise environments. Each gets SAST, SCA,
 and quality analysis coverage using the best-in-class open source tools for that ecosystem.
@@ -3512,7 +3512,7 @@ and quality analysis coverage using the best-in-class open source tools for that
 
 ---
 
-### Sprint 39 — Language Expansion: Tier 2 (PHP · Ruby · Swift · Shell)
+### Sprint 39 — Language Expansion: Tier 2 [DONE] (PHP · Ruby · Swift · Shell)
 
 #### 39.1 PHP
 
@@ -3573,7 +3573,7 @@ and quality analysis coverage using the best-in-class open source tools for that
 
 ---
 
-### Sprint 40 — Language Expansion: Tier 3 (Scala · Elixir · Dart · Go Extras)
+### Sprint 40 — Language Expansion: Tier 3 [DONE] (Scala · Elixir · Dart · Go Extras)
 
 #### 40.1 Scala
 
@@ -3622,7 +3622,7 @@ and quality analysis coverage using the best-in-class open source tools for that
 
 ---
 
-### Sprint 41 — IaC Deep: Cloud Providers (Terraform · CloudFormation · CDK · Pulumi · Bicep)
+### Sprint 41 — IaC Deep: Cloud [DONE] Providers (Terraform · CloudFormation · CDK · Pulumi · Bicep)
 
 #### 41.1 Terraform
 
@@ -3683,7 +3683,7 @@ and quality analysis coverage using the best-in-class open source tools for that
 
 ---
 
-### Sprint 42 — IaC Deep: Kubernetes, Containers & Configuration Management
+### Sprint 42 — IaC Deep: Kubernetes [DONE], Containers & Configuration Management
 
 #### 42.1 Kubernetes Manifests
 
@@ -3745,7 +3745,7 @@ and quality analysis coverage using the best-in-class open source tools for that
 
 ---
 
-### Sprint 43 — Container Image Security
+### Sprint 43 — Container Image [DONE] Security
 
 Beyond scanning the *source code* of containers, Armur should also scan *built images* and running containers.
 
@@ -3795,7 +3795,7 @@ binary security, threat modeling, dependency automation, and security test gener
 
 ---
 
-### Sprint 44 — Observability & Operations
+### Sprint 44 — Observability [DONE] & Operations
 
 #### 44.1 Prometheus Metrics
 - [ ] Add `/metrics` endpoint exposing Prometheus metrics
@@ -3821,7 +3821,7 @@ binary security, threat modeling, dependency automation, and security test gener
 
 ---
 
-### Sprint 45 — Streaming Architecture (Server-Side Events)
+### Sprint 45 — Streaming [DONE] Architecture (Server-Side Events)
 
 To power the live TUI dashboard, the server must push real-time per-tool progress events
 to the CLI as the scan executes rather than waiting until everything is done.
@@ -3876,7 +3876,7 @@ to the CLI as the scan executes rather than waiting until everything is done.
 
 ---
 
-### Sprint 46 — API & Protocol Improvements
+### Sprint 46 — API ### Sprint 46 — API & Protocol Protocol [DONE] Improvements
 
 #### 46.1 Typed API Response Model
 
@@ -3915,7 +3915,7 @@ self-documenting, testable, and generates accurate OpenAPI schemas.
 
 ---
 
-### Sprint 47 — Rules Marketplace & Customization
+### Sprint 47 — Rules Marketplace [DONE] & Customization
 
 #### 47.1 Community Rules Registry
 
@@ -3959,7 +3959,7 @@ self-documenting, testable, and generates accurate OpenAPI schemas.
 
 ---
 
-### Sprint 48 — Fuzzing Integration (Go · Python · JavaScript)
+### Sprint 48 — Fuzzing [DONE] Integration (Go · Python · JavaScript)
 
 Static analysis finds known patterns. Fuzzing finds unknown crashes, panics, and logic bugs that no
 rule ever catches. All three integrations use the same tool-wrapper pattern — exec.Command + output
@@ -4007,7 +4007,7 @@ parsing — with no novel infrastructure required.
 
 ---
 
-### Sprint 49 — Privacy & PII Compliance (GDPR · CCPA · LGPD)
+### Sprint 49 — Privacy [DONE] & PII Compliance (GDPR · CCPA · LGPD)
 
 All checks are pure Go pattern matching, ORM model parsing, and compliance mapping tables.
 No external tools required — same implementation approach as the existing CWE/OWASP mapping logic.
@@ -4076,7 +4076,7 @@ No external tools required — same implementation approach as the existing CWE/
 
 ---
 
-### Sprint 50 — Cryptographic Health & Post-Quantum Readiness
+### Sprint 50 — Cryptographic [DONE] Health & Post-Quantum Readiness
 
 All checks use Go's `crypto/x509` stdlib for certificate parsing, regex on config files for TLS
 settings, and new Semgrep rules for algorithm detection. Zero new infrastructure required.
@@ -4145,7 +4145,7 @@ settings, and new Semgrep rules for algorithm detection. Zero new infrastructure
 
 ---
 
-### Sprint 51 — Binary & Compiled Artifact Security
+### Sprint 51 — Binary [DONE] & Compiled Artifact Security
 
 All integrations follow the standard tool-wrapper pattern. `checksec` is a widely available tool;
 Go binary metadata extraction uses the standard `go` binary already on the PATH.
@@ -4191,7 +4191,7 @@ Go binary metadata extraction uses the standard `go` binary already on the PATH.
 
 ---
 
-### Sprint 52 — Threat Modeling from Code
+### Sprint 52 — Threat Modeling [DONE] from Code
 
 Route detection uses Semgrep patterns against the top 5 frameworks — exactly the same mechanism
 as existing SAST rules. Mermaid output is pure string generation. No novel infrastructure.
@@ -4249,7 +4249,7 @@ as existing SAST rules. Mermaid output is pure string generation. No novel infra
 
 ---
 
-### Sprint 53 — Dependency Update Automation (Auto-Fix PRs)
+### Sprint 53 — Dependency Update [DONE] Automation (Auto-Fix PRs)
 
 Manifest parsing uses stdlib text manipulation; GitHub/GitLab PR creation uses `net/http` + JSON.
 The `gh` CLI (already used for releases) provides a fallback for GitHub.
@@ -4308,7 +4308,7 @@ The `gh` CLI (already used for releases) provides a fallback for GitHub.
 
 ---
 
-### Sprint 54 — Network & Protocol Configuration Security
+### Sprint 54 — Network [DONE] & Protocol Configuration Security
 
 All checks are regex/grep on config files (nginx, Apache, Istio YAML) or YAML parsing using
 `gopkg.in/yaml.v3` which is already in go.mod. No external tools required.
@@ -4365,7 +4365,7 @@ All checks are regex/grep on config files (nginx, Apache, Istio YAML) or YAML pa
 
 ---
 
-### Sprint 55 — Security Test Generation
+### Sprint 55 — Security Test [DONE] Generation
 
 Pure Go code generation using `text/template` stdlib. No external tools, no new dependencies.
 The output is test files (.go, .py, .js) generated from templates and written with `os.WriteFile`.
@@ -4440,7 +4440,7 @@ Performance at scale, security governance, threat intelligence enrichment, and L
 
 ---
 
-### Sprint 56 — Performance at Scale (Monorepos, Caching, Distributed Scanning)
+### Sprint 56 — Performance [DONE] at Scale (Monorepos, Caching, Distributed Scanning)
 
 #### 56.1 Monorepo Support
 
@@ -4487,7 +4487,7 @@ Performance at scale, security governance, threat intelligence enrichment, and L
 
 ---
 
-### Sprint 57 — Governance: Verified Fixes, Regression Prevention & SLA Enforcement
+### Sprint 57 — Governance [DONE]: Verified Fixes, Regression Prevention & SLA Enforcement
 
 Security fixes that silently reappear are a major enterprise pain point. This sprint makes Armur
 into an active security guardian — not just a reporter — by verifying fixes, preventing regressions,
@@ -4621,7 +4621,7 @@ teams prioritize and helps management understand risk.
 
 ---
 
-### Sprint 58 — Threat Intelligence: OpenSSF Scorecard, CISA KEV, EPSS & SLSA
+### Sprint 58 — Threat Intelligence [DONE]: OpenSSF Scorecard, CISA KEV, EPSS & SLSA
 
 #### 58.1 OpenSSF Scorecard Integration
 
@@ -4706,7 +4706,7 @@ SLSA (Supply-chain Levels for Software Artifacts) is a framework for supply chai
 
 ---
 
-### Sprint 59 — AI/LLM Application Security (OWASP LLM Top 10)
+### Sprint 59 — AI/LLM Application [DONE] Security (OWASP LLM Top 10)
 
 All checks implemented as Semgrep rule packs + a small Go wrapper. Same implementation pattern
 as all existing SAST tool integrations.
