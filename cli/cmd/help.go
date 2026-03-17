@@ -1,113 +1,130 @@
 package cmd
 
 import (
+	"armur-cli/internal/tui"
 	"fmt"
 	"os"
 
-	"github.com/charmbracelet/huh"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 )
 
-var (
-	titleStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("#FF5F87")).
-			Padding(0, 1)
+func runInteractiveMenu() {
+	menu := tui.NewMenu()
+	p := tea.NewProgram(menu, tea.WithAltScreen())
 
-	commandStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("#00FF9F"))
-
-	descriptionStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#A9B1D6"))
-)
-
-type CommandInfo struct {
-	Name        string
-	Description string
-	Usage       string
-}
-
-var commands = []CommandInfo{
-	{
-		Name:        "scan",
-		Description: "Use the scan commmand to scan your codebase for security vulnerabilities",
-		Usage:       "armur scan [flags]",
-	},
-	{
-		Name:        "report",
-		Description: "Generate and view security reports from a scan",
-		Usage:       "armur report [flags]",
-	},
-	{
-		Name:        "status",
-		Description: "Check the status of your scans",
-		Usage:       "armur status [flags]",
-	},
-	{
-		Name:        "config",
-		Description: "Configure Armur CLI settings which includes api_url, redis_url and api_key",
-		Usage:       "armur config [flags]",
-	},
-	{
-		Name:        "docker",
-		Description: "For ease of use of the cli, easily start the project in docker using the available commands",
-		Usage:       "armur docker [flags]",
-	},
-	{
-		Name:        "apiaudit",
-		Description: "Use the API directly from Armur to audit your files",
-		Usage:       "armur apiaudit [flags]",
-	},
-}
-
-func ShowInteractiveHelp() {
-	var selectedCommand string
-
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title(titleStyle.Render("Armur CLI Commands")).
-				Description("Select a command to view its details").
-				Options(
-					huh.NewOption("Scan", "scan"),
-					huh.NewOption("Report", "report"),
-					huh.NewOption("Status", "status"),
-					huh.NewOption("Config", "config"),
-					huh.NewOption("Docker", "docker"),
-					huh.NewOption("API Audit", "apiaudit"),
-				).
-				Value(&selectedCommand),
-		),
-	)
-
-	err := form.Run()
+	finalModel, err := p.Run()
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Find the selected command info
-	var selectedInfo CommandInfo
-	for _, cmd := range commands {
-		if cmd.Name == selectedCommand {
-			selectedInfo = cmd
-			break
-		}
+	m := finalModel.(tui.MenuModel)
+	if m.Quit {
+		return
 	}
 
-	// Display command details
-	fmt.Printf("\n%s\n", titleStyle.Render("Command Details"))
-	fmt.Printf("%s: %s\n", commandStyle.Render("Command"), selectedInfo.Name)
-	fmt.Printf("%s: %s\n", descriptionStyle.Render("Description"), selectedInfo.Description)
-	fmt.Printf("%s: %s\n", commandStyle.Render("Usage"), selectedInfo.Usage)
-	fmt.Println("\nPress Enter to exit...")
-	fmt.Scanln()
+	// Route to the selected command
+	switch m.Selected {
+	case "scan":
+		runScanFlow()
+	case "run":
+		runCmd.Run(runCmd, []string{})
+	case "review":
+		fmt.Print("\n")
+		fmt.Print(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39")).PaddingLeft(2).Render("Enter PR URL: "))
+		var prURL string
+		fmt.Scanln(&prURL)
+		if prURL != "" {
+			reviewCmd.Run(reviewCmd, []string{prURL})
+		}
+	case "history":
+		historyCmd.Run(historyCmd, []string{})
+	case "report":
+		reportCmd.Run(reportCmd, []string{})
+	case "explain":
+		fmt.Print("\n")
+		fmt.Print(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39")).PaddingLeft(2).Render("Enter finding ID: "))
+		var findingID string
+		fmt.Scanln(&findingID)
+		if findingID != "" {
+			explainCmd.Run(explainCmd, []string{findingID})
+		}
+	case "fix":
+		fmt.Print("\n")
+		fmt.Print(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39")).PaddingLeft(2).Render("Enter finding ID: "))
+		var findingID string
+		fmt.Scanln(&findingID)
+		if findingID != "" {
+			fixCmd.Run(fixCmd, []string{findingID})
+		}
+	case "doctor":
+		doctorCmd.Run(doctorCmd, []string{})
+	case "init":
+		initCmd.Run(initCmd, []string{})
+	case "setup":
+		runSetupFlow()
+	}
+}
+
+func runScanFlow() {
+	cwd, _ := os.Getwd()
+	flow := tui.NewScanFlow(cwd)
+	p := tea.NewProgram(flow, tea.WithAltScreen())
+
+	finalModel, err := p.Run()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return
+	}
+
+	m := finalModel.(tui.ScanFlowModel)
+	if m.Cancelled {
+		fmt.Println("Scan cancelled.")
+		return
+	}
+
+	if m.Confirmed {
+		target, language, depth := m.GetScanConfig()
+
+		// Build scan args
+		args := []string{target}
+		if language != "" {
+			scanCmd.Flags().Set("language", language)
+		}
+		if depth == "deep" {
+			scanCmd.Flags().Set("advanced", "true")
+		}
+		scanCmd.Run(scanCmd, args)
+	}
+}
+
+func runSetupFlow() {
+	fmt.Println()
+
+	setupStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39")).PaddingLeft(2)
+	optStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("252")).PaddingLeft(4)
+	dimStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("245")).PaddingLeft(6)
+
+	fmt.Println(setupStyle.Render("Setup Options"))
+	fmt.Println()
+	fmt.Println(optStyle.Render("1. Configure AI provider (Claude API / Ollama)"))
+	fmt.Println(dimStyle.Render("   Run: armur config set anthropic-api-key <your-key>"))
+	fmt.Println()
+	fmt.Println(optStyle.Render("2. Set up MCP for Claude Code"))
+	fmt.Println(dimStyle.Render("   Run: claude mcp add armur -- armur mcp"))
+	fmt.Println()
+	fmt.Println(optStyle.Render("3. Set up MCP for Cursor"))
+	fmt.Println(dimStyle.Render("   Run: armur mcp setup cursor"))
+	fmt.Println()
+	fmt.Println(optStyle.Render("4. Initialize project config"))
+	fmt.Println(dimStyle.Render("   Run: armur init"))
+	fmt.Println()
 }
 
 func init() {
 	rootCmd.Run = func(cmd *cobra.Command, args []string) {
-		ShowInteractiveHelp()
+		runInteractiveMenu()
 	}
 }
