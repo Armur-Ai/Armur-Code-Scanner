@@ -1,9 +1,9 @@
 {
-  "name": "@armur/cli",
+  "name": "@vibescan/cli",
   "version": "0.0.1",
-  "description": "Armur — Personal Security Agent. SAST + DAST + exploit simulation + attack path analysis.",
+  "description": "vibescan — Security Scanner for Vibe-Coded Software. SAST + DAST + exploit simulation + attack path analysis.",
   "bin": {
-    "armur": "bin/armur.js"
+    "vibescan": "bin/vibescan.js"
   },
   "scripts": {
     "postinstall": "node scripts/install.js"
@@ -17,18 +17,19 @@
     "devsecops",
     "exploit",
     "attack-path",
-    "code-review",
-    "security-agent"
+    "vibecoding",
+    "ai-generated-code",
+    "code-review"
   ],
-  "author": "Armur AI <hello@armur.ai>",
+  "author": "vibescan <hello@vibescan.dev>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/armur-ai/armur"
+    "url": "https://github.com/Armur-Ai/Armur-Code-Scanner"
   },
-  "homepage": "https://armur.ai",
+  "homepage": "https://vibescan.dev",
   "bugs": {
-    "url": "https://github.com/armur-ai/armur/issues"
+    "url": "https://github.com/Armur-Ai/Armur-Code-Scanner/issues"
   },
   "engines": {
     "node": ">=16"

@@ -60,7 +60,7 @@ var doctorCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Println(color.CyanString("armur doctor"))
+		fmt.Println(color.CyanString("vibescan doctor"))
 		fmt.Println(strings.Repeat("─", 50))
 
 		exitCode := 0
@@ -73,7 +73,7 @@ var doctorCmd = &cobra.Command{
 			printCheck(true, "API server", cfg.API.URL)
 		} else {
 			printCheck(false, "API server", cfg.API.URL+" (not reachable)")
-			fmt.Println("              → Start with: armur serve")
+			fmt.Println("              → Start with: vibescan serve")
 		}
 
 		// Check Redis
@@ -91,7 +91,7 @@ var doctorCmd = &cobra.Command{
 		if cfg.APIKey != "" {
 			printCheck(true, "API key", "configured")
 		} else {
-			printWarn("API key", "not configured (set with: armur config set api_key <key>)")
+			printWarn("API key", "not configured (set with: vibescan config set api_key <key>)")
 		}
 
 		// Check Docker
@@ -101,11 +101,11 @@ var doctorCmd = &cobra.Command{
 			printWarn("Docker", "not found (needed for sandbox DAST)")
 		}
 
-		// Check .armur.yml
-		if _, err := os.Stat(".armur.yml"); err == nil {
-			printCheck(true, ".armur.yml", "found in current directory")
+		// Check .vibescan.yml
+		if _, err := os.Stat(".vibescan.yml"); err == nil {
+			printCheck(true, ".vibescan.yml", "found in current directory")
 		} else {
-			printWarn(".armur.yml", "not found (create with: armur init)")
+			printWarn(".vibescan.yml", "not found (create with: vibescan init)")
 		}
 
 		fmt.Println(strings.Repeat("─", 50))

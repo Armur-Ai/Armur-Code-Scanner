@@ -162,7 +162,7 @@ func (m DashboardModel) View() string {
 		Width(min(m.width-2, 70))
 
 	elapsed := time.Since(m.StartedAt).Truncate(time.Second)
-	header := fmt.Sprintf("ARMUR  ·  %s  ·  %s  ·  %s scan  ·  %s",
+	header := fmt.Sprintf("VIBESCAN  ·  %s  ·  %s  ·  %s scan  ·  %s",
 		m.Target, strings.ToUpper(m.Language), m.Mode, elapsed)
 	b.WriteString(headerStyle.Render(header))
 	b.WriteString("\n\n")

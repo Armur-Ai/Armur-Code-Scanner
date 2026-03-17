@@ -35,7 +35,7 @@ Includes: what it is, why it matters, attack scenario, and how to fix it.`,
 		fmt.Printf("Explaining finding %s...\n", color.CyanString(findingID))
 		fmt.Println()
 		color.Yellow("AI explanation requires ANTHROPIC_API_KEY or a running Ollama instance.")
-		fmt.Println("Set up AI: armur config set anthropic-api-key <your-key>")
+		fmt.Println("Set up AI: vibescan config set anthropic-api-key <your-key>")
 		fmt.Println("Or install Ollama: brew install ollama && ollama pull llama3.1:8b")
 	},
 }
@@ -58,7 +58,7 @@ that fixes the reported security issue without changing functionality.`,
 
 		fmt.Println()
 		color.Yellow("AI fix generation requires ANTHROPIC_API_KEY or a running Ollama instance.")
-		fmt.Println("Set up AI: armur config set anthropic-api-key <your-key>")
+		fmt.Println("Set up AI: vibescan config set anthropic-api-key <your-key>")
 	},
 }
 

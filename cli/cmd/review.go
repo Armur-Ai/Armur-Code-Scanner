@@ -15,8 +15,8 @@ Analyzes changed files with SAST, checks for new vulnerable dependencies,
 scans for leaked secrets, and optionally runs DAST in a sandbox.
 
 Example:
-  armur review https://github.com/owner/repo/pull/123
-  armur review https://github.com/owner/repo/pull/123 --dast --post-comment`,
+  vibescan review https://github.com/owner/repo/pull/123
+  vibescan review https://github.com/owner/repo/pull/123 --dast --post-comment`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		prURL := args[0]

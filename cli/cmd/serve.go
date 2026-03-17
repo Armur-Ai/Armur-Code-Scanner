@@ -20,7 +20,7 @@ const defaultServerPort = "4500"
 
 // pidFilePath returns the path to the PID file for the embedded server.
 func pidFilePath() string {
-	return filepath.Join(os.Getenv("HOME"), ".armur", "server.pid")
+	return filepath.Join(os.Getenv("HOME"), ".vibescan", "server.pid")
 }
 
 // isServerRunning checks if a server is already listening on the given address.
@@ -159,7 +159,7 @@ func ensureServer(apiURL string, noServer bool) string {
 	fmt.Println(color.YellowString("No server detected on %s — starting embedded server...", addr))
 	if err := startEmbeddedServer(port); err != nil {
 		color.Red("Failed to auto-start server: %v", err)
-		color.Red("Start the server manually with 'armur serve' or Docker, or use --no-server to skip.")
+		color.Red("Start the server manually with 'vibescan serve' or Docker, or use --no-server to skip.")
 		os.Exit(1)
 	}
 
@@ -172,10 +172,10 @@ var serveCmd = &cobra.Command{
 	Short: "Start the Armur API server locally",
 	Long: `Start the Armur Code Scanner API server as a local process.
 The server listens on port 4500 by default (use --port to change).
-Use 'armur serve stop' to stop a previously started server.`,
+Use 'vibescan serve stop' to stop a previously started server.`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		// Handle 'armur serve stop'
+		// Handle 'vibescan serve stop'
 		if len(args) == 1 && args[0] == "stop" {
 			if err := stopEmbeddedServer(); err != nil {
 				color.Red("Error: %v", err)
@@ -203,7 +203,7 @@ Use 'armur serve stop' to stop a previously started server.`,
 		}
 
 		color.Green("Server started successfully on port %s (PID file: %s)", port, pidFilePath())
-		fmt.Println("Use 'armur serve stop' to stop the server.")
+		fmt.Println("Use 'vibescan serve stop' to stop the server.")
 	},
 }
 

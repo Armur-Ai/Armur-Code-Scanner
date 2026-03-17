@@ -37,7 +37,7 @@ func NewMenu() MenuModel {
 			{ID: "explain", Title: "Explain Finding", Description: "Get an AI explanation of a security finding", Icon: ""},
 			{ID: "fix", Title: "Fix Finding", Description: "Generate an AI-powered code patch", Icon: ""},
 			{ID: "doctor", Title: "Check Health", Description: "Verify tools, server, and configuration", Icon: ""},
-			{ID: "init", Title: "Initialize Project", Description: "Create .armur.yml config for this project", Icon: ""},
+			{ID: "init", Title: "Initialize Project", Description: "Create .vibescan.yml config for this project", Icon: ""},
 			{ID: "setup", Title: "Setup AI / MCP", Description: "Configure Claude API, Ollama, or editor integration", Icon: ""},
 		},
 	}
@@ -97,9 +97,9 @@ func (m MenuModel) View() string {
 		Width(width)
 
 	b.WriteString("\n")
-	b.WriteString(bannerStyle.Render("A R M U R"))
+	b.WriteString(bannerStyle.Render("V I B E S C A N"))
 	b.WriteString("\n")
-	b.WriteString(subtitleStyle.Render("Your Personal Security Agent"))
+	b.WriteString(subtitleStyle.Render("Security Scanner for Vibe-Coded Software"))
 	b.WriteString("\n")
 	b.WriteString(subtitleStyle.Render("SAST  +  DAST  +  Exploit Simulation  +  Attack Paths"))
 	b.WriteString("\n\n")
@@ -186,7 +186,7 @@ func (m MenuModel) View() string {
 	versionStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("238")).
 		PaddingLeft(2)
-	b.WriteString(versionStyle.Render("armur v0.1.0 — https://armur.ai"))
+	b.WriteString(versionStyle.Render("vibescan v0.1.0 — https://vibescan.dev"))
 	b.WriteString("\n")
 
 	return b.String()

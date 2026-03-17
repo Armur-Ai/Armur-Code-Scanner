@@ -6,7 +6,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// ProjectConfig represents the .armur.yml project configuration.
+// ProjectConfig represents the .vibescan.yml project configuration.
 type ProjectConfig struct {
 	Scan struct {
 		Depth             string `yaml:"depth"`
@@ -26,11 +26,11 @@ type ProjectConfig struct {
 	} `yaml:"output"`
 }
 
-// LoadProjectConfig loads .armur.yml from the given directory (or cwd if empty).
+// LoadProjectConfig loads .vibescan.yml from the given directory (or cwd if empty).
 func LoadProjectConfig(dir string) (*ProjectConfig, error) {
-	path := ".armur.yml"
+	path := ".vibescan.yml"
 	if dir != "" && dir != "." {
-		path = dir + "/.armur.yml"
+		path = dir + "/.vibescan.yml"
 	}
 
 	data, err := os.ReadFile(path)

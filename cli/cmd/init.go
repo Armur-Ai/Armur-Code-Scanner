@@ -11,14 +11,14 @@ import (
 
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Create a .armur.yml configuration file in the current directory",
-	Long:  `Initialize a new .armur.yml project configuration with sane defaults using an interactive wizard.`,
+	Short: "Create a .vibescan.yml configuration file in the current directory",
+	Long:  `Initialize a new .vibescan.yml project configuration with sane defaults using an interactive wizard.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// Check if .armur.yml already exists
-		if _, err := os.Stat(".armur.yml"); err == nil {
+		// Check if .vibescan.yml already exists
+		if _, err := os.Stat(".vibescan.yml"); err == nil {
 			var overwrite bool
 			huh.NewConfirm().
-				Title(".armur.yml already exists. Overwrite?").
+				Title(".vibescan.yml already exists. Overwrite?").
 				Value(&overwrite).
 				Run()
 			if !overwrite {
@@ -82,7 +82,7 @@ var initCmd = &cobra.Command{
 			langLine = fmt.Sprintf("  language: %s\n", language)
 		}
 
-		yaml := fmt.Sprintf(`# Armur Security Agent — Project Configuration
+		yaml := fmt.Sprintf(`# vibescan — Project Configuration
 # Docs: https://docs.armur.ai/configuration
 
 scan:
@@ -118,13 +118,13 @@ exclude:
 #     language: go
 `, depth, langLine, severity, failOnFindings)
 
-		if err := os.WriteFile(".armur.yml", []byte(yaml), 0644); err != nil {
-			color.Red("Error writing .armur.yml: %v", err)
+		if err := os.WriteFile(".vibescan.yml", []byte(yaml), 0644); err != nil {
+			color.Red("Error writing .vibescan.yml: %v", err)
 			os.Exit(1)
 		}
 
-		color.Green("Created .armur.yml in current directory.")
-		fmt.Println("Run 'armur scan .' to start scanning.")
+		color.Green("Created .vibescan.yml in current directory.")
+		fmt.Println("Run 'vibescan scan .' to start scanning.")
 	},
 }
 

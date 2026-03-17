@@ -33,12 +33,12 @@ var quickstartCmd = &cobra.Command{
 			cmd  string
 			desc string
 		}{
-			{"1", "armur doctor", "Check which security tools are available on your machine"},
-			{"2", "armur init", "Create a .armur.yml config file for your project"},
-			{"3", "armur run", "Launch the interactive security agent with live dashboard"},
-			{"4", "armur scan .", "Quick one-shot scan of your project"},
-			{"5", "armur history", "View past scan results"},
-			{"6", "armur explain <id>", "Get an AI explanation of a finding"},
+			{"1", "vibescan doctor", "Check which security tools are available on your machine"},
+			{"2", "vibescan init", "Create a .vibescan.yml config file for your project"},
+			{"3", "vibescan run", "Launch the interactive security agent with live dashboard"},
+			{"4", "vibescan scan .", "Quick one-shot scan of your project"},
+			{"5", "vibescan history", "View past scan results"},
+			{"6", "vibescan explain <id>", "Get an AI explanation of a finding"},
 		}
 
 		for _, s := range steps {
@@ -47,8 +47,8 @@ var quickstartCmd = &cobra.Command{
 			fmt.Println()
 		}
 
-		fmt.Println(lipgloss.NewStyle().Foreground(lipgloss.Color("245")).Render("  For CI/CD setup: armur scan . --format sarif --fail-on-severity high"))
-		fmt.Println(lipgloss.NewStyle().Foreground(lipgloss.Color("245")).Render("  For AI editors:  armur mcp setup claude-code"))
+		fmt.Println(lipgloss.NewStyle().Foreground(lipgloss.Color("245")).Render("  For CI/CD setup: vibescan scan . --format sarif --fail-on-severity high"))
+		fmt.Println(lipgloss.NewStyle().Foreground(lipgloss.Color("245")).Render("  For AI editors:  vibescan mcp setup claude-code"))
 		fmt.Println()
 		fmt.Println(lipgloss.NewStyle().Foreground(lipgloss.Color("245")).Render("  Docs: https://docs.armur.ai"))
 		fmt.Println(lipgloss.NewStyle().Foreground(lipgloss.Color("245")).Render("  Help: armur --help"))

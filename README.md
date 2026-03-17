@@ -1,8 +1,8 @@
 <div align="center">
 
-# Armur
+# vibescan
 
-### Your Personal Security Agent
+### Security Scanner for Vibe-Coded Software
 
 **SAST + DAST + Exploit Simulation + Attack Path Analysis — All Automated**
 
@@ -17,7 +17,7 @@
 
 ---
 
-Armur is an open-source personal security agent that goes beyond scanning. It analyzes your code with 30+ security tools, runs your application in a sandbox for dynamic testing, simulates real exploits to confirm vulnerabilities, maps attack paths, and reviews every pull request — all automatically.
+vibescan is an open-source security scanner built for the vibecoding era. It that goes beyond scanning. It analyzes your code with 30+ security tools, runs your application in a sandbox for dynamic testing, simulates real exploits to confirm vulnerabilities, maps attack paths, and reviews every pull request — all automatically.
 
 Built for the era of AI-generated code where automated security validation is essential.
 
@@ -27,38 +27,38 @@ Built for the era of AI-generated code where automated security validation is es
 
 ```bash
 # macOS / Linux
-brew install armur-ai/tap/armur
+brew install vibescan-ai/tap/vibescan
 
 # npm (any platform)
-npm install -g @armur/cli
+npm install -g @vibescan/cli
 
 # pip
-pip install armur
+pip install vibescan
 
 # Direct download
-curl -fsSL https://install.armur.ai | sh
+curl -fsSL https://install.vibescan.dev | sh
 
 # Docker (zero install)
-docker run --rm -v $(pwd):/scan armur/agent scan /scan
+docker run --rm -v $(pwd):/scan vibescan/agent scan /scan
 ```
 
 **Run your first scan:**
 
 ```bash
 # Interactive mode with guided wizard + live dashboard
-armur run
+vibescan run
 
 # Direct scan of current directory
-armur scan .
+vibescan scan .
 
 # Scan a GitHub repository
-armur scan https://github.com/owner/repo -l go
+vibescan scan https://github.com/owner/repo -l go
 
 # Deep scan with all tools
-armur scan . --advanced
+vibescan scan . --advanced
 ```
 
-That's it. Armur auto-detects the language, runs the right tools, deduplicates findings, and shows you a severity-sorted summary.
+That's it. vibescan auto-detects the language, runs the right tools, deduplicates findings, and shows you a severity-sorted summary.
 
 ## Features
 
@@ -66,31 +66,31 @@ That's it. Armur auto-detects the language, runs the right tools, deduplicates f
 Run 30+ security tools across 10 languages with a single command. Findings are deduplicated, severity-normalized, and sorted by risk.
 
 ### DAST (Dynamic Application Security Testing)
-Armur can auto-detect your tech stack, generate a Dockerfile, build and run your app in an isolated sandbox, and hammer it with security tests — passive header checks, active injection probes, Nuclei CVE templates, and ZAP deep scans.
+vibescan can auto-detect your tech stack, generate a Dockerfile, build and run your app in an isolated sandbox, and hammer it with security tests — passive header checks, active injection probes, Nuclei CVE templates, and ZAP deep scans.
 
 ### Exploit Simulation
-Don't just find vulnerabilities — prove they're exploitable. Armur generates proof-of-concept exploits (SQL injection, XSS, command injection, path traversal, SSRF) and runs them safely inside the sandbox. Confirmed exploits get a `[CONFIRMED]` badge.
+Don't just find vulnerabilities — prove they're exploitable. vibescan generates proof-of-concept exploits (SQL injection, XSS, command injection, path traversal, SSRF) and runs them safely inside the sandbox. Confirmed exploits get a `[CONFIRMED]` badge.
 
 ### Attack Path Analysis
-Individual findings are noise. Attack paths are signal. Armur chains related findings into attack graphs: "SSRF + cloud metadata = credential theft" and generates Mermaid diagrams for visualization.
+Individual findings are noise. Attack paths are signal. vibescan chains related findings into attack graphs: "SSRF + cloud metadata = credential theft" and generates Mermaid diagrams for visualization.
 
 ### PR Security Agent
-Armur automatically reviews pull requests — runs SAST on the diff, checks for new vulnerable dependencies, scans for leaked secrets, and posts a detailed review with inline comments.
+vibescan automatically reviews pull requests — runs SAST on the diff, checks for new vulnerable dependencies, scans for leaked secrets, and posts a detailed review with inline comments.
 
 ```bash
-armur review https://github.com/owner/repo/pull/123
+vibescan review https://github.com/owner/repo/pull/123
 ```
 
 ### AI-Powered Intelligence
 Uses Claude API or local LLMs (Ollama) for:
-- `armur explain <finding-id>` — plain-English explanation with attack scenario
-- `armur fix <finding-id>` — AI-generated code patch
+- `vibescan explain <finding-id>` — plain-English explanation with attack scenario
+- `vibescan fix <finding-id>` — AI-generated code patch
 - Tech stack detection for DAST sandbox creation
 
 ### MCP Server for AI Editors
 Works with Claude Code, Cursor, and Windsurf as an MCP server:
 ```bash
-claude mcp add armur -- armur mcp
+claude mcp add armur -- vibescan mcp
 ```
 
 ## Supported Languages
@@ -119,31 +119,31 @@ claude mcp add armur -- armur mcp
 
 | Command | Description |
 |---------|-------------|
-| `armur run` | Interactive wizard + live TUI dashboard |
-| `armur scan <target>` | One-shot scan (file, directory, or git URL) |
-| `armur review <pr-url>` | Review a GitHub/GitLab pull request |
-| `armur explain <id>` | AI explanation of a finding |
-| `armur fix <id>` | AI-generated code patch |
-| `armur serve` | Start the embedded API server |
-| `armur doctor` | Check which tools are installed |
-| `armur init` | Create `.armur.yml` config file |
-| `armur history` | List past scans |
-| `armur compare <id1> <id2>` | Diff two scan results |
-| `armur report --format html` | Generate HTML/CSV/OWASP/SANS reports |
-| `armur mcp` | Start MCP server for AI editors |
-| `armur quickstart` | Interactive getting-started guide |
-| `armur completion <shell>` | Shell completions (bash/zsh/fish/powershell) |
-| `armur version` | Print version info |
+| `vibescan run` | Interactive wizard + live TUI dashboard |
+| `vibescan scan <target>` | One-shot scan (file, directory, or git URL) |
+| `vibescan review <pr-url>` | Review a GitHub/GitLab pull request |
+| `vibescan explain <id>` | AI explanation of a finding |
+| `vibescan fix <id>` | AI-generated code patch |
+| `vibescan serve` | Start the embedded API server |
+| `vibescan doctor` | Check which tools are installed |
+| `vibescan init` | Create `.vibescan.yml` config file |
+| `vibescan history` | List past scans |
+| `vibescan compare <id1> <id2>` | Diff two scan results |
+| `vibescan report --format html` | Generate HTML/CSV/OWASP/SANS reports |
+| `vibescan mcp` | Start MCP server for AI editors |
+| `vibescan quickstart` | Interactive getting-started guide |
+| `vibescan completion <shell>` | Shell completions (bash/zsh/fish/powershell) |
+| `vibescan version` | Print version info |
 
 ### Key Flags
 
 ```bash
-armur scan . --advanced              # deep scan with all tools
-armur scan . --format sarif          # SARIF output (for GitHub Security tab)
-armur scan . --fail-on-severity high # exit code 1 on HIGH+ findings (CI use)
-armur scan . --min-severity medium   # suppress LOW and INFO findings
-armur scan . --watch                 # re-scan on file changes
-armur scan . --no-server             # skip auto-starting the embedded server
+vibescan scan . --advanced              # deep scan with all tools
+vibescan scan . --format sarif          # SARIF output (for GitHub Security tab)
+vibescan scan . --fail-on-severity high # exit code 1 on HIGH+ findings (CI use)
+vibescan scan . --min-severity medium   # suppress LOW and INFO findings
+vibescan scan . --watch                 # re-scan on file changes
+vibescan scan . --no-server             # skip auto-starting the embedded server
 ```
 
 ## CI/CD Integration
@@ -151,7 +151,7 @@ armur scan . --no-server             # skip auto-starting the embedded server
 ### GitHub Actions
 
 ```yaml
-- name: Armur Security Scan
+- name: vibescan Security Scan
   uses: armur-ai/armur-code-scanner@main
   with:
     path: '.'
@@ -162,8 +162,8 @@ armur scan . --no-server             # skip auto-starting the embedded server
 Or use the CLI directly:
 
 ```yaml
-- run: curl -fsSL https://install.armur.ai | sh
-- run: armur scan . --format sarif --output results.sarif --fail-on-severity high
+- run: curl -fsSL https://install.vibescan.dev | sh
+- run: vibescan scan . --format sarif --output results.sarif --fail-on-severity high
 - uses: github/codeql-action/upload-sarif@v3
   with:
     sarif_file: results.sarif
@@ -173,9 +173,9 @@ Or use the CLI directly:
 
 ```yaml
 armur-scan:
-  image: armur/agent:latest
+  image: vibescan/agent:latest
   script:
-    - armur scan . --format sarif --output gl-sast-report.json --fail-on-severity high
+    - vibescan scan . --format sarif --output gl-sast-report.json --fail-on-severity high
   artifacts:
     reports:
       sast: gl-sast-report.json
@@ -187,11 +187,11 @@ See full guides for [CircleCI](docs/ci/circleci.md), [Jenkins](docs/ci/jenkins.m
 
 ## AI Editor Integration (MCP)
 
-Armur works as an MCP server with Claude Code, Cursor, and Windsurf:
+vibescan works as an MCP server with Claude Code, Cursor, and Windsurf:
 
 ```bash
 # Claude Code
-claude mcp add armur -- armur mcp
+claude mcp add armur -- vibescan mcp
 
 # Cursor — add to ~/.cursor/mcp.json
 # Windsurf — add to Windsurf MCP config
@@ -206,7 +206,7 @@ Available MCP tools:
 
 ## Configuration
 
-Create `.armur.yml` in your project root (or run `armur init`):
+Create `.vibescan.yml` in your project root (or run `vibescan init`):
 
 ```yaml
 scan:
@@ -275,7 +275,7 @@ API docs available at `http://localhost:4500/swagger/index.html`
 
 ## Security
 
-Found a vulnerability in Armur itself? See [SECURITY.md](SECURITY.md) for responsible disclosure.
+Found a vulnerability in vibescan itself? See [SECURITY.md](SECURITY.md) for responsible disclosure.
 
 ## Contributing
 
@@ -306,6 +306,6 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 <div align="center">
 
-**[armur.ai](https://armur.ai)** &bull; [Discord](https://discord.gg/PEycrqvd) &bull; [Documentation](docs/)
+**[vibescan.dev](https://vibescan.dev)** &bull; [Discord](https://discord.gg/PEycrqvd) &bull; [Documentation](docs/)
 
 </div>

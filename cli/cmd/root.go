@@ -8,9 +8,9 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "armur",
-	Short: "Armur — Your Personal Security Agent",
-	Long:  `Armur is a personal security agent that analyzes your code, runs it in a sandbox, simulates attacks, and shows you exactly how to fix what it finds.`,
+	Use:   "vibescan",
+	Short: "vibescan — Security Scanner for Vibe-Coded Software",
+	Long:  `vibescan is a security scanner built for the vibecoding era. It analyzes AI-generated code, runs it in a sandbox, simulates attacks, and shows you exactly how to fix what it finds.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		verbose, _ := cmd.Flags().GetBool("verbose")
 		if verbose {
@@ -27,8 +27,6 @@ func Execute() {
 }
 
 func init() {
-	// --api-key / -k flag overrides config file and ARMUR_API_KEY env var
-	rootCmd.PersistentFlags().StringP("api-key", "k", "", "API key for authenticating with the Armur server (overrides ARMUR_API_KEY env var)")
-	// --verbose / -v enables debug-level logging
+	rootCmd.PersistentFlags().StringP("api-key", "k", "", "API key for authenticating with the server")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "Enable verbose (debug) output")
 }

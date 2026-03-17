@@ -115,8 +115,8 @@ func GenerateHTML(taskID string, results map[string]interface{}) (string, error)
 		categorySections.String(),
 	)
 
-	// Save to ~/.armur/reports/
-	dir := filepath.Join(os.Getenv("HOME"), ".armur", "reports")
+	// Save to ~/.vibescan/reports/
+	dir := filepath.Join(os.Getenv("HOME"), ".vibescan", "reports")
 	os.MkdirAll(dir, 0755)
 	path := filepath.Join(dir, taskID+".html")
 	if err := os.WriteFile(path, []byte(report), 0644); err != nil {
@@ -145,7 +145,7 @@ func GenerateCSV(taskID string, results map[string]interface{}, outputPath strin
 	}
 
 	if outputPath == "" {
-		dir := filepath.Join(os.Getenv("HOME"), ".armur", "reports")
+		dir := filepath.Join(os.Getenv("HOME"), ".vibescan", "reports")
 		os.MkdirAll(dir, 0755)
 		outputPath = filepath.Join(dir, taskID+".csv")
 	}

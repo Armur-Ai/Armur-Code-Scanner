@@ -13,7 +13,7 @@ import (
 var historyCmd = &cobra.Command{
 	Use:   "history",
 	Short: "List past scans with timestamps and finding counts",
-	Long:  `View scan history stored locally in SQLite (~/.armur/history.db).`,
+	Long:  `View scan history stored locally in SQLite (~/.vibescan/history.db).`,
 	Run: func(cmd *cobra.Command, args []string) {
 		db, err := history.Open()
 		if err != nil {

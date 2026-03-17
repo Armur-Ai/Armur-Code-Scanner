@@ -1,9 +1,9 @@
 version: 2
 
 builds:
-  - id: armur-server
+  - id: vibescan-server
     main: ./cmd/server
-    binary: armur-server
+    binary: vibescan-server
     env:
       - CGO_ENABLED=0
     goos:
@@ -18,9 +18,9 @@ builds:
       - -X main.commit={{.ShortCommit}}
       - -X main.date={{.Date}}
 
-  - id: armur-cli
+  - id: vibescan-cli
     dir: cli
-    binary: armur
+    binary: vibescan
     env:
       - CGO_ENABLED=0
     goos:
@@ -39,16 +39,16 @@ builds:
 archives:
   - id: cli-archive
     builds:
-      - armur-cli
-    name_template: "armur_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+      - vibescan-cli
+    name_template: "vibescan_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format_overrides:
       - goos: windows
         format: zip
 
   - id: server-archive
     builds:
-      - armur-server
-    name_template: "armur-server_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+      - vibescan-server
+    name_template: "vibescan-server_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 checksum:
   name_template: 'checksums.txt'
@@ -62,16 +62,16 @@ changelog:
       - '^test:'
 
 brews:
-  - name: armur
+  - name: vibescan
     ids:
       - cli-archive
     repository:
-      owner: armur-ai
+      owner: Armur-Ai
       name: homebrew-tap
-    homepage: "https://armur.ai"
-    description: "Personal Security Agent — SAST + DAST + exploit simulation"
+    homepage: "https://vibescan.dev"
+    description: "Security Scanner for Vibe-Coded Software — SAST + DAST + exploit simulation"
     license: "MIT"
     install: |
-      bin.install "armur"
+      bin.install "vibescan"
     test: |
-      system "#{bin}/armur", "version"
+      system "#{bin}/vibescan", "version"

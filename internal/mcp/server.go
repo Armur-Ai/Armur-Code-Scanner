@@ -8,10 +8,10 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-// StartMCPServer starts the Armur MCP server over stdio.
+// StartMCPServer starts the vibescan MCP server over stdio.
 func StartMCPServer() error {
 	s := server.NewMCPServer(
-		"armur",
+		"vibescan",
 		"1.0.0",
 		server.WithToolCapabilities(true),
 		server.WithResourceCapabilities(true, false),

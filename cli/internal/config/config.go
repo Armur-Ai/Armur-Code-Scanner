@@ -19,7 +19,7 @@ type Config struct {
 }
 
 // configFilePath is the path to the configuration file.
-var configFilePath = filepath.Join(os.Getenv("HOME"), ".armur", "config.json")
+var configFilePath = filepath.Join(os.Getenv("HOME"), ".vibescan", "config.json")
 
 // LoadConfig loads the configuration from the config file.
 func LoadConfig() (*Config, error) {

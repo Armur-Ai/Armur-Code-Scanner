@@ -14,7 +14,7 @@ var mcpCmd = &cobra.Command{
 This integrates Armur with Claude Code, Cursor, Windsurf, and other AI coding assistants.
 
 Setup for Claude Code:
-  claude mcp add armur -- armur mcp
+  claude mcp add armur -- vibescan mcp
 
 Or add to ~/.claude/settings.json:
   {
@@ -32,13 +32,13 @@ Or add to ~/.claude/settings.json:
 		// 1. Build a combined binary, or
 		// 2. Shell out to armur-server --mcp
 		// For now, print setup instructions.
-		fmt.Println(color.CyanString("Armur MCP Server"))
+		fmt.Println(color.CyanString("vibescan MCP Server"))
 		fmt.Println()
 		fmt.Println("Starting MCP server over stdio...")
 		fmt.Println("This command is designed to be called by AI coding assistants.")
 		fmt.Println()
 		fmt.Println("Setup:")
-		fmt.Println(color.GreenString("  claude mcp add armur -- armur mcp"))
+		fmt.Println(color.GreenString("  claude mcp add armur -- vibescan mcp"))
 		fmt.Println()
 		fmt.Println("Available MCP tools:")
 		fmt.Println("  armur_scan_path         — Scan a local file or directory")
@@ -63,7 +63,7 @@ var mcpSetupCmd = &cobra.Command{
 			fmt.Println(color.CyanString("Setting up Armur for Claude Code..."))
 			fmt.Println()
 			fmt.Println("Run this command:")
-			fmt.Println(color.GreenString("  claude mcp add armur -- armur mcp"))
+			fmt.Println(color.GreenString("  claude mcp add armur -- vibescan mcp"))
 			fmt.Println()
 			fmt.Println("Or add to ~/.claude/settings.json manually:")
 			fmt.Println(`  {

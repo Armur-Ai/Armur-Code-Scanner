@@ -189,7 +189,7 @@ If no target is specified, scans the current directory.`,
 
 		// Print task ID for future reference
 		fmt.Printf("\nTask ID: %s\n", taskID)
-		fmt.Printf("View again: armur history show %s\n", taskID)
+		fmt.Printf("View again: vibescan history show %s\n", taskID)
 	},
 }
 

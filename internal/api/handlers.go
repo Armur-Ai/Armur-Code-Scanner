@@ -305,7 +305,7 @@ func TaskSans(c *gin.Context) {
 func HealthCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "ok",
-		"service": "armur-security-agent",
+		"service": "vibescan",
 	})
 }
 

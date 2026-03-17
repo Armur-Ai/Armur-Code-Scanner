@@ -1,65 +1,65 @@
 {
-  "name": "armur-security",
-  "displayName": "Armur Security Agent",
-  "description": "Personal security agent for your code — SAST, DAST, exploit simulation, attack path analysis",
+  "name": "vibescan",
+  "displayName": "vibescan — Security Scanner for Vibe-Coded Software",
+  "description": "Security scanner for AI-generated code — SAST, DAST, exploit simulation, attack path analysis",
   "version": "0.0.1",
-  "publisher": "armur-ai",
+  "publisher": "vibescan",
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": ["Linters", "Other"],
-  "keywords": ["security", "scanner", "SAST", "DAST", "DevSecOps", "vulnerability"],
+  "keywords": ["security", "scanner", "SAST", "DAST", "DevSecOps", "vibecoding", "ai-code"],
   "activationEvents": [
-    "workspaceContains:.armur.yml",
-    "onCommand:armur.scanWorkspace"
+    "workspaceContains:.vibescan.yml",
+    "onCommand:vibescan.scanWorkspace"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "armur.scanWorkspace",
-        "title": "Armur: Scan Workspace"
+        "command": "vibescan.scanWorkspace",
+        "title": "vibescan: Scan Workspace"
       },
       {
-        "command": "armur.explainFinding",
-        "title": "Armur: Explain Finding"
+        "command": "vibescan.explainFinding",
+        "title": "vibescan: Explain Finding"
       },
       {
-        "command": "armur.fixFinding",
-        "title": "Armur: Fix with AI"
+        "command": "vibescan.fixFinding",
+        "title": "vibescan: Fix with AI"
       }
     ],
     "configuration": {
-      "title": "Armur Security",
+      "title": "vibescan",
       "properties": {
-        "armur.scanDepth": {
+        "vibescan.scanDepth": {
           "type": "string",
           "default": "quick",
           "enum": ["quick", "deep"],
           "description": "Default scan depth"
         },
-        "armur.scanOnSave": {
+        "vibescan.scanOnSave": {
           "type": "boolean",
           "default": false,
           "description": "Automatically scan on file save"
         },
-        "armur.scanOnOpen": {
+        "vibescan.scanOnOpen": {
           "type": "boolean",
           "default": true,
           "description": "Scan workspace when opened"
         },
-        "armur.minSeverity": {
+        "vibescan.minSeverity": {
           "type": "string",
           "default": "medium",
           "enum": ["info", "low", "medium", "high", "critical"],
           "description": "Minimum severity to display"
         },
-        "armur.binaryPath": {
+        "vibescan.binaryPath": {
           "type": "string",
-          "default": "armur",
-          "description": "Path to the armur binary"
+          "default": "vibescan",
+          "description": "Path to the vibescan binary"
         },
-        "armur.useLocalMode": {
+        "vibescan.useLocalMode": {
           "type": "boolean",
           "default": true,
           "description": "Run scans locally without a server"
@@ -69,7 +69,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/armur-ai/armur"
+    "url": "https://github.com/Armur-Ai/Armur-Code-Scanner"
   },
   "license": "MIT"
 }

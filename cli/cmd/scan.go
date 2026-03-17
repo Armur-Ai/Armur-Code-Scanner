@@ -19,9 +19,9 @@ import (
 
 var scanInteractiveCmd = &cobra.Command{
 	Use:   "scan-i",
-	Short: "Enter interactive scanning mode (alias: armur scan --interactive)",
+	Short: "Enter interactive scanning mode (alias: vibescan scan --interactive)",
 	Long:  "Launches a terminal UI to configure and start a scan interactively.",
-	Deprecated: "Use 'armur scan --interactive' instead.",
+	Deprecated: "Use 'vibescan scan --interactive' instead.",
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg, err := config.LoadConfig()
 		if err != nil {

@@ -200,7 +200,7 @@ func (m ScanFlowModel) View() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(headerStyle.Render("ARMUR — Scan Configuration"))
+	b.WriteString(headerStyle.Render("VIBESCAN — Scan Configuration"))
 	b.WriteString("\n")
 	b.WriteString(lipgloss.NewStyle().PaddingLeft(2).Render(strings.Join(steps, "  →  ")))
 	b.WriteString("\n\n")

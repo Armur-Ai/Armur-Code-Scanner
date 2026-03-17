@@ -35,7 +35,7 @@ type DB struct {
 
 // dbPath returns the default database path.
 func dbPath() string {
-	return filepath.Join(os.Getenv("HOME"), ".armur", "history.db")
+	return filepath.Join(os.Getenv("HOME"), ".vibescan", "history.db")
 }
 
 // Open opens or creates the history database.
