@@ -124,7 +124,7 @@ Vibecoding is fast. But AI-generated code ships vulnerabilities you didn't write
 
 ```bash
 # macOS / Linux
-brew install vibescan-ai/tap/vibescan
+brew install Armur-Ai/tap/vibescan
 
 # npm (any platform)
 npm install -g @vibescan/cli
@@ -133,7 +133,7 @@ npm install -g @vibescan/cli
 pip install vibescan
 
 # Direct download
-curl -fsSL https://install.vibescan.dev | sh
+curl -fsSL https://raw.githubusercontent.com/Armur-Ai/vibescan/main/scripts/install.sh | sh
 ```
 
 **Then just run it:**
@@ -321,7 +321,7 @@ vibescan scan . --watch
 ```yaml
 - name: vibescan Security Scan
   run: |
-    curl -fsSL https://install.vibescan.dev | sh
+    curl -fsSL https://raw.githubusercontent.com/Armur-Ai/vibescan/main/scripts/install.sh | sh
     vibescan scan . --format sarif --output results.sarif --fail-on-severity high
 - uses: github/codeql-action/upload-sarif@v3
   if: always()
