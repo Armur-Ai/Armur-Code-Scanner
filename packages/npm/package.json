@@ -21,15 +21,15 @@
     "ai-generated-code",
     "code-review"
   ],
-  "author": "vibescan <hello@vibescan.dev>",
+  "author": "Armur AI <hello@vibescan.dev>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Armur-Ai/Armur-Code-Scanner"
+    "url": "https://github.com/Armur-Ai/vibescan"
   },
   "homepage": "https://vibescan.dev",
   "bugs": {
-    "url": "https://github.com/Armur-Ai/Armur-Code-Scanner/issues"
+    "url": "https://github.com/Armur-Ai/vibescan/issues"
   },
   "engines": {
     "node": ">=16"

@@ -68,6 +68,7 @@ brews:
     repository:
       owner: Armur-Ai
       name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     homepage: "https://vibescan.dev"
     description: "Security Scanner for Vibe-Coded Software — SAST + DAST + exploit simulation"
     license: "MIT"

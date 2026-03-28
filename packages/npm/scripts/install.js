@@ -6,8 +6,8 @@ const https = require("https");
 const path = require("path");
 const os = require("os");
 
-const REPO = "armur-ai/armur";
-const BIN_NAME = os.platform() === "win32" ? "armur.exe" : "armur";
+const REPO = "Armur-Ai/vibescan";
+const BIN_NAME = os.platform() === "win32" ? "vibescan.exe" : "vibescan";
 
 function getPlatform() {
   const platform = os.platform();
@@ -38,8 +38,26 @@ function getLatestVersion() {
   return new Promise((resolve, reject) => {
     https.get(
       `https://api.github.com/repos/${REPO}/releases/latest`,
-      { headers: { "User-Agent": "armur-npm-installer" } },
+      { headers: { "User-Agent": "vibescan-npm-installer" } },
       (res) => {
+        if (res.statusCode === 302 || res.statusCode === 301) {
+          https.get(
+            res.headers.location,
+            { headers: { "User-Agent": "vibescan-npm-installer" } },
+            (res2) => {
+              let data = "";
+              res2.on("data", (chunk) => (data += chunk));
+              res2.on("end", () => {
+                try {
+                  resolve(JSON.parse(data).tag_name || "v0.0.1");
+                } catch {
+                  resolve("v0.0.1");
+                }
+              });
+            }
+          );
+          return;
+        }
         let data = "";
         res.on("data", (chunk) => (data += chunk));
         res.on("end", () => {
@@ -63,7 +81,7 @@ async function install() {
     const tag = version.replace(/^v/, "");
 
     const ext = osName === "windows" ? "zip" : "tar.gz";
-    const filename = `armur_${tag}_${osName}_${arch}.${ext}`;
+    const filename = `vibescan_${tag}_${osName}_${arch}.${ext}`;
     const url = `https://github.com/${REPO}/releases/download/${version}/${filename}`;
 
     const binDir = path.join(__dirname, "..", "bin");
@@ -71,18 +89,18 @@ async function install() {
 
     const tmpFile = path.join(os.tmpdir(), filename);
 
-    console.log(`Downloading Armur ${version} for ${osName}/${arch}...`);
+    console.log(`Downloading vibescan ${version} for ${osName}/${arch}...`);
 
     // Download binary
     execSync(`curl -fsSL -o "${tmpFile}" "${url}"`, { stdio: "inherit" });
 
     // Extract
     if (ext === "tar.gz") {
-      execSync(`tar -xzf "${tmpFile}" -C "${binDir}" armur`, {
+      execSync(`tar -xzf "${tmpFile}" -C "${binDir}" vibescan`, {
         stdio: "inherit",
       });
     } else {
-      execSync(`unzip -o "${tmpFile}" armur.exe -d "${binDir}"`, {
+      execSync(`unzip -o "${tmpFile}" vibescan.exe -d "${binDir}"`, {
         stdio: "inherit",
       });
     }
@@ -98,11 +116,13 @@ async function install() {
       fs.unlinkSync(tmpFile);
     } catch {}
 
-    console.log(`Armur ${version} installed successfully!`);
-    console.log(`Run: npx armur run`);
+    console.log(`vibescan ${version} installed successfully!`);
+    console.log(`Run: npx vibescan run .`);
   } catch (err) {
-    console.error("Failed to install Armur binary:", err.message);
-    console.error("You can install manually: curl -fsSL https://install.armur.ai | sh");
+    console.error("Failed to install vibescan binary:", err.message);
+    console.error(
+      "You can install manually: brew install Armur-Ai/tap/vibescan"
+    );
     process.exit(0); // Don't fail npm install
   }
 }

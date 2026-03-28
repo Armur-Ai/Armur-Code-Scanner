@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vibescan"
+version = "0.0.1"
+description = "vibescan — Security Scanner for Vibe-Coded Software"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+authors = [{name = "Armur AI", email = "hello@vibescan.dev"}]
+keywords = ["security", "sast", "dast", "scanner", "vulnerability", "devsecops"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Topic :: Security",
+    "Topic :: Software Development :: Quality Assurance",
+]
+
+[project.urls]
+Homepage = "https://vibescan.dev"
+Repository = "https://github.com/Armur-Ai/vibescan"
+Issues = "https://github.com/Armur-Ai/vibescan/issues"
+
+[project.scripts]
+vibescan = "vibescan.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["vibescan*"]

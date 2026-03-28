@@ -1,12 +1,12 @@
 #!/bin/sh
-# Armur Security Agent — Universal Installer
-# Usage: curl -fsSL https://install.armur.ai | sh
+# vibescan — Universal Installer
+# Usage: curl -fsSL https://raw.githubusercontent.com/Armur-Ai/vibescan/main/scripts/install.sh | sh
 
 set -e
 
-REPO="armur-ai/armur"
-INSTALL_DIR="/usr/local/bin"
-BINARY_NAME="armur"
+REPO="Armur-Ai/vibescan"
+INSTALL_DIR="${VIBESCAN_INSTALL_DIR:-/usr/local/bin}"
+BINARY_NAME="vibescan"
 
 # Colors
 RED='\033[0;31m'
@@ -37,15 +37,32 @@ detect_arch() {
     esac
 }
 
-# Get latest release version
-get_latest_version() {
+# Download helper
+fetch() {
     if command -v curl > /dev/null 2>&1; then
-        curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | sed 's/.*"tag_name": "\(.*\)".*/\1/'
+        curl -fsSL -o "$2" "$1"
     elif command -v wget > /dev/null 2>&1; then
-        wget -qO- "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | sed 's/.*"tag_name": "\(.*\)".*/\1/'
+        wget -qO "$2" "$1"
     else
         error "curl or wget required for installation"
     fi
+}
+
+# Get latest release version
+get_latest_version() {
+    local tmpfile
+    tmpfile=$(mktemp)
+    if command -v curl > /dev/null 2>&1; then
+        curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
+            -H "User-Agent: vibescan-installer" > "$tmpfile" 2>/dev/null
+    elif command -v wget > /dev/null 2>&1; then
+        wget -qO "$tmpfile" "https://api.github.com/repos/${REPO}/releases/latest" \
+            --header="User-Agent: vibescan-installer" 2>/dev/null
+    else
+        error "curl or wget required for installation"
+    fi
+    grep '"tag_name"' "$tmpfile" | head -1 | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/'
+    rm -f "$tmpfile"
 }
 
 main() {
@@ -54,56 +71,81 @@ main() {
     VERSION=$(get_latest_version)
 
     if [ -z "$VERSION" ]; then
-        VERSION="v0.0.1"
+        error "Could not determine latest version. Check https://github.com/${REPO}/releases"
     fi
 
     TAG=$(echo "$VERSION" | sed 's/^v//')
     EXT="tar.gz"
     if [ "$OS" = "windows" ]; then
         EXT="zip"
-        BINARY_NAME="armur.exe"
+        BINARY_NAME="vibescan.exe"
     fi
 
-    FILENAME="armur_${TAG}_${OS}_${ARCH}.${EXT}"
+    FILENAME="vibescan_${TAG}_${OS}_${ARCH}.${EXT}"
     URL="https://github.com/${REPO}/releases/download/${VERSION}/${FILENAME}"
 
-    info "Downloading Armur ${VERSION} for ${OS}/${ARCH}..."
+    echo ""
+    info "vibescan installer"
+    info "Version:  ${VERSION}"
+    info "Platform: ${OS}/${ARCH}"
+    echo ""
 
     TMP_DIR=$(mktemp -d)
-    TMP_FILE="${TMP_DIR}/${FILENAME}"
+    trap 'rm -rf "$TMP_DIR"' EXIT
 
-    if command -v curl > /dev/null 2>&1; then
-        curl -fsSL -o "$TMP_FILE" "$URL"
-    else
-        wget -q -O "$TMP_FILE" "$URL"
+    info "Downloading ${FILENAME}..."
+    fetch "$URL" "${TMP_DIR}/${FILENAME}"
+
+    # Verify checksum
+    CHECKSUM_URL="https://github.com/${REPO}/releases/download/${VERSION}/checksums.txt"
+    if fetch "$CHECKSUM_URL" "${TMP_DIR}/checksums.txt" 2>/dev/null; then
+        EXPECTED=$(grep "$FILENAME" "${TMP_DIR}/checksums.txt" | awk '{print $1}')
+        if [ -n "$EXPECTED" ]; then
+            if command -v sha256sum > /dev/null 2>&1; then
+                ACTUAL=$(sha256sum "${TMP_DIR}/${FILENAME}" | awk '{print $1}')
+            elif command -v shasum > /dev/null 2>&1; then
+                ACTUAL=$(shasum -a 256 "${TMP_DIR}/${FILENAME}" | awk '{print $1}')
+            fi
+            if [ -n "$ACTUAL" ] && [ "$EXPECTED" != "$ACTUAL" ]; then
+                error "Checksum mismatch! Expected: ${EXPECTED}, Got: ${ACTUAL}"
+            fi
+            success "Checksum verified"
+        fi
     fi
 
     info "Extracting..."
     if [ "$EXT" = "tar.gz" ]; then
-        tar -xzf "$TMP_FILE" -C "$TMP_DIR"
+        tar -xzf "${TMP_DIR}/${FILENAME}" -C "$TMP_DIR"
     else
-        unzip -q "$TMP_FILE" -d "$TMP_DIR"
+        unzip -q "${TMP_DIR}/${FILENAME}" -d "$TMP_DIR"
     fi
 
     # Install binary
     if [ -w "$INSTALL_DIR" ]; then
         mv "${TMP_DIR}/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
+        chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
     else
         info "Installing to ${INSTALL_DIR} (requires sudo)..."
         sudo mv "${TMP_DIR}/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
+        sudo chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
     fi
-    chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
 
-    # Cleanup
-    rm -rf "$TMP_DIR"
+    echo ""
+    success "vibescan ${VERSION} installed to ${INSTALL_DIR}/${BINARY_NAME}"
+    echo ""
+    echo "  Get started:"
+    echo "    ${CYAN}vibescan run .${NC}        scan current directory"
+    echo "    ${CYAN}vibescan doctor${NC}       check tool availability"
+    echo "    ${CYAN}vibescan --help${NC}       see all commands"
+    echo ""
 
-    success "Armur ${VERSION} installed to ${INSTALL_DIR}/${BINARY_NAME}"
-    echo ""
-    echo "Get started:"
-    echo "  ${CYAN}armur run${NC}          — interactive scan with TUI"
-    echo "  ${CYAN}armur scan .${NC}       — scan current directory"
-    echo "  ${CYAN}armur doctor${NC}       — check tool availability"
-    echo ""
+    # Verify it works
+    if command -v vibescan > /dev/null 2>&1; then
+        success "Installation verified — vibescan is in your PATH"
+    else
+        echo "  ${RED}Note:${NC} ${INSTALL_DIR} may not be in your PATH."
+        echo "  Add it: export PATH=\"${INSTALL_DIR}:\$PATH\""
+    fi
 }
 
 main
