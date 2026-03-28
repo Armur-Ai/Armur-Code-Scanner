@@ -19,6 +19,101 @@
 
 ---
 
+## Credits & Inspiration
+
+vibescan stands on the shoulders of incredible open-source security projects. We didn't reinvent the wheel — we built an orchestration layer that unifies the best tools into a single, developer-friendly experience.
+
+**Projects that inspired us:**
+
+| Project | What we learned |
+|---------|----------------|
+| [Semgrep](https://github.com/semgrep/semgrep) | Lightweight, multi-language static analysis done right. Our core SAST engine. |
+| [Trivy](https://github.com/aquasecurity/trivy) | Comprehensive vulnerability scanning for containers, filesystems, and IaC. |
+| [Nuclei](https://github.com/projectdiscovery/nuclei) | Template-based vulnerability scanning at scale. Inspired our exploit template system. |
+| [OWASP ZAP](https://github.com/zaproxy/zaproxy) | The gold standard for open-source DAST. Influenced our sandboxed runtime testing. |
+| [SonarQube](https://github.com/SonarSource/sonarqube) | Proved that continuous code quality inspection works. We wanted that for security, in the terminal. |
+| [Snyk](https://snyk.io) | Showed that developer-first security UX matters more than feature count. |
+| [CodeQL](https://github.com/github/codeql) | Deep semantic analysis and the GitHub Security ecosystem we integrate with via SARIF. |
+| [Gitleaks](https://github.com/gitleaks/gitleaks) | Fast, accurate secret detection with excellent rule coverage. |
+| [Checkov](https://github.com/bridgecrewio/checkov) | Multi-framework IaC scanning. Our IaC coverage builds directly on it. |
+
+### Open-Source Security Tools in Our Pipeline
+
+vibescan is **not** a single scanner — it's a pipeline that runs **30+ industry-grade open-source tools**, normalizes their output, deduplicates findings, and presents unified results. Here's every tool we orchestrate:
+
+<details>
+<summary><strong>SAST — Static Application Security Testing</strong></summary>
+
+| Tool | Language/Target | What it finds | Link |
+|------|----------------|---------------|------|
+| **Semgrep** | 15+ languages | Code vulnerabilities, taint tracking, custom rules | [semgrep.dev](https://github.com/semgrep/semgrep) |
+| **Gosec** | Go | Security misconfigurations, crypto issues, injection flaws | [github](https://github.com/securego/gosec) |
+| **Staticcheck** | Go | Bugs, performance issues, simplifications | [github](https://github.com/dominikh/go-tools) |
+| **Govet** | Go | Suspicious constructs (printf args, struct tags, unreachable code) | [pkg.go.dev](https://pkg.go.dev/cmd/vet) |
+| **Gocyclo** | Go | Cyclomatic complexity (identifies hard-to-test functions) | [github](https://github.com/fzipp/gocyclo) |
+| **Bandit** | Python | Common security issues (eval, exec, hardcoded passwords) | [github](https://github.com/PyCQA/bandit) |
+| **Pylint** | Python | Code quality, error detection, convention enforcement | [github](https://github.com/pylint-dev/pylint) |
+| **Radon** | Python | Cyclomatic complexity and maintainability index | [github](https://github.com/rubik/radon) |
+| **Vulture** | Python | Dead code detection | [github](https://github.com/jendrikseipp/vulture) |
+| **ESLint** | JavaScript/TS | Security rules, code quality, best practices | [github](https://github.com/eslint/eslint) |
+| **SpotBugs** | Java/Kotlin | 400+ bug patterns including security | [github](https://github.com/spotbugs/spotbugs) |
+| **PMD** | Java/Kotlin | 300+ rules including security and code quality | [github](https://github.com/pmd/pmd) |
+| **Brakeman** | Ruby/Rails | SQL injection, XSS, CSRF, mass assignment | [github](https://github.com/presidentbeef/brakeman) |
+| **PHPCS** | PHP | Security sniffs, coding standards | [github](https://github.com/PHPCSStandards/PHP_CodeSniffer) |
+| **Psalm** | PHP | Type inference, taint analysis, security-focused mode | [github](https://github.com/vimeo/psalm) |
+| **Cppcheck** | C/C++ | Buffer overflows, null pointer derefs, memory leaks | [github](https://github.com/danmar/cppcheck) |
+| **Flawfinder** | C/C++ | Security-focused source code scanner (CWE-mapped) | [github](https://github.com/david-a-wheeler/flawfinder) |
+| **Slither** | Solidity | Smart contract vulnerabilities, 90+ detectors | [github](https://github.com/crytic/slither) |
+| **Mythril** | Solidity | Symbolic execution for EVM bytecode | [github](https://github.com/Consensys/mythril) |
+| **Clippy** | Rust | Security-relevant lints, correctness checks | [github](https://github.com/rust-lang/rust-clippy) |
+| **ShellCheck** | Shell/Bash | Script analysis, injection risks, quoting issues | [github](https://github.com/koalaman/shellcheck) |
+| **JSCPD** | All languages | Copy-paste detection across codebases | [github](https://github.com/kucherenko/jscpd) |
+
+</details>
+
+<details>
+<summary><strong>SCA — Software Composition Analysis</strong></summary>
+
+| Tool | Ecosystem | What it finds | Link |
+|------|-----------|---------------|------|
+| **Trivy** | All | CVEs in OS packages, language deps, and container images | [github](https://github.com/aquasecurity/trivy) |
+| **OSV-Scanner** | All | Queries Google's OSV database for known vulnerabilities | [github](https://github.com/google/osv-scanner) |
+| **Govulncheck** | Go | Reachability-aware Go vulnerability detection (only flags vulns your code actually calls) | [github](https://github.com/golang/vuln) |
+| **Cargo Audit** | Rust | RustSec advisory database scanning | [github](https://github.com/rustsec/rustsec) |
+| **Bundler Audit** | Ruby | RubyGems advisory scanning | [github](https://github.com/rubysec/bundler-audit) |
+| **OWASP Dependency-Check** | Java | CVE scanning for Maven/Gradle/Ivy | [github](https://github.com/jeremylong/DependencyCheck) |
+| **Grype** | Containers | Image vulnerability scanning (NVD + GitHub Advisory + OSV) | [github](https://github.com/anchore/grype) |
+
+</details>
+
+<details>
+<summary><strong>Secrets Detection</strong></summary>
+
+| Tool | What it finds | Link |
+|------|---------------|------|
+| **Gitleaks** | 150+ secret types (AWS, GCP, GitHub, Stripe, Slack, etc.) with git history scanning | [github](https://github.com/gitleaks/gitleaks) |
+| **Trufflehog** | High-entropy strings, credential patterns, verified secret validation | [github](https://github.com/trufflesecurity/trufflehog) |
+
+</details>
+
+<details>
+<summary><strong>IaC — Infrastructure as Code</strong></summary>
+
+| Tool | Target | What it finds | Link |
+|------|--------|---------------|------|
+| **Checkov** | Terraform, CloudFormation, K8s, Helm, Docker | 1000+ security policies across cloud providers | [github](https://github.com/bridgecrewio/checkov) |
+| **TFSec** | Terraform | AWS/Azure/GCP misconfigurations | [github](https://github.com/aquasecurity/tfsec) |
+| **KICS** | Multi-IaC | 50+ platforms including Terraform, Ansible, Docker, K8s | [github](https://github.com/Checkmarx/kics) |
+| **Hadolint** | Dockerfile | Dockerfile best practices + ShellCheck on RUN commands | [github](https://github.com/hadolint/hadolint) |
+| **Kube-linter** | Kubernetes | Security and production-readiness checks | [github](https://github.com/stackrox/kube-linter) |
+| **Kube-score** | Kubernetes | Best practice scoring for workload manifests | [github](https://github.com/zegl/kube-score) |
+
+</details>
+
+Every finding from every tool flows through our normalization pipeline — severity mapping, CWE enrichment, deduplication, and fingerprinting — so you get one clean, unified report instead of 30 different outputs.
+
+---
+
 Vibecoding is fast. But AI-generated code ships vulnerabilities you didn't write and don't understand.
 
 **vibescan** catches them. It runs 30+ security tools, builds your app in a sandbox, simulates real attacks, maps exploit chains, and reviews every PR — all from a single interactive terminal UI.
